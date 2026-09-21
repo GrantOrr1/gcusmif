@@ -1,0 +1,37 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { teamBySlug, isSamePerson } from "@/lib/team";
+import { upsertProfileOverride } from "@/lib/profileOverrides";
+
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => null);
+  const slug = body?.slug;
+  if (typeof slug !== "string") {
+    return NextResponse.json({ error: "Missing slug" }, { status: 400 });
+  }
+
+  const person = teamBySlug(slug);
+  if (!person) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (!isSamePerson(session.user?.name, person)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const bio = typeof body.bio === "string" ? body.bio.trim().slice(0, 2000) : undefined;
+  const linkedinUrl =
+    typeof body.linkedinUrl === "string" ? body.linkedinUrl.trim().slice(0, 300) : undefined;
+
+  upsertProfileOverride(slug, {
+    bio: bio === "" ? null : bio,
+    linkedinUrl: linkedinUrl === "" ? null : linkedinUrl,
+  });
+
+  return NextResponse.json({ ok: true });
+}
