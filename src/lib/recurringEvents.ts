@@ -48,8 +48,24 @@ export function getRecurringEvent(id: number): RecurringEvent | undefined {
   return row ? fromRow(row) : undefined;
 }
 
-export function deleteRecurringEvent(id: number): void {
-  db.prepare("DELETE FROM recurring_events WHERE id = ?").run(id);
+export type RecurringException = { recurringEventId: number; date: string };
+
+/** Every skipped single-week occurrence, across all recurring events. */
+export function listRecurringExceptions(): RecurringException[] {
+  const rows = db.prepare("SELECT recurring_event_id, date FROM recurring_event_exceptions").all() as {
+    recurring_event_id: number;
+    date: string;
+  }[];
+  return rows.map((r) => ({ recurringEventId: r.recurring_event_id, date: r.date }));
+}
+
+/** Skips a single week's occurrence of a recurring event without touching the standing weekly rule. */
+export function addRecurringException(recurringEventId: number, date: string, createdBy: string): void {
+  db.prepare(
+    `INSERT INTO recurring_event_exceptions (recurring_event_id, date, created_by)
+     VALUES (?, ?, ?)
+     ON CONFLICT(recurring_event_id, date) DO NOTHING`
+  ).run(recurringEventId, date, createdBy);
 }
 
 export function updateRecurringEventTime(

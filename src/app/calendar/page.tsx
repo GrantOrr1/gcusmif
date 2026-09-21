@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
 import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
 import { listCalendarEvents } from "@/lib/calendarStore";
-import { listRecurringEvents } from "@/lib/recurringEvents";
+import { listRecurringEvents, listRecurringExceptions } from "@/lib/recurringEvents";
 import { withCoverage, listEarningsEligibleTickers } from "@/lib/tickerCoverage";
 import CalendarView from "@/components/calendar/CalendarView";
 
@@ -13,12 +13,25 @@ export const metadata = {
 export default async function CalendarPage() {
   const session = await auth();
   const me = TEAM.find((m) => isSamePerson(session?.user?.name, m));
+
+  if (!session) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+        <h1 className="text-3xl font-bold text-foreground">Calendar</h1>
+        <p className="mt-4 text-sm text-muted">
+          This page is only available to logged-in analysts.
+        </p>
+      </div>
+    );
+  }
+
   const isPortfolioManager = hasPortfolioManagerAccess(me);
   const canAdd = isPortfolioManager || !!me?.role.includes("Sector Head");
 
-  const [events, recurringEvents, equityOptions] = await Promise.all([
+  const [events, recurringEvents, recurringExceptions, equityOptions] = await Promise.all([
     Promise.resolve(listCalendarEvents().map(withCoverage)),
     Promise.resolve(listRecurringEvents()),
+    Promise.resolve(listRecurringExceptions()),
     listEarningsEligibleTickers(),
   ]);
 
@@ -36,6 +49,7 @@ export default async function CalendarPage() {
         <CalendarView
           initialEvents={events}
           initialRecurring={recurringEvents}
+          initialExceptions={recurringExceptions}
           equityOptions={equityOptions}
           canAdd={canAdd}
           myName={me?.name ?? null}

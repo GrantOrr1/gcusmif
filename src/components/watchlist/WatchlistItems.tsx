@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Avatar from "@/components/team/Avatar";
-import { slugifyName } from "@/lib/team";
+import AssigneeList from "@/components/team/AssigneeList";
 import { formatPrice, formatPercent } from "@/lib/format";
 import type { WatchlistItem } from "@/lib/watchlistStore";
 import type { SectorInfo } from "@/lib/sectors";
@@ -84,21 +83,8 @@ function ItemCard({
         </p>
         <PriceTargets item={item} />
       </Link>
-      <div className="mt-2 flex min-h-[18px] flex-wrap gap-x-3 gap-y-1">
-        {item.assignedTo.length > 0 ? (
-          item.assignedTo.map((name) => (
-            <Link
-              key={name}
-              href={`/team/${slugifyName(name)}`}
-              className="flex items-center gap-1.5 text-xs text-muted hover:text-brand"
-            >
-              <Avatar name={name} size={18} />
-              <span>{name}</span>
-            </Link>
-          ))
-        ) : (
-          <span className="text-xs text-muted">Unassigned</span>
-        )}
+      <div className="mt-2 min-h-[18px]">
+        <AssigneeList names={item.assignedTo} />
       </div>
       <div className="mt-auto pt-3">{canRate && <RatingButton item={item} onClick={onRate} />}</div>
     </div>
@@ -149,21 +135,8 @@ function ItemRow({
       >
         {quote?.changePercent != null ? formatPercent(quote.changePercent) : "—"}
       </Link>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        {item.assignedTo.length > 0 ? (
-          item.assignedTo.map((name) => (
-            <Link
-              key={name}
-              href={`/team/${slugifyName(name)}`}
-              className="flex items-center gap-1.5 text-xs text-muted hover:text-brand"
-            >
-              <Avatar name={name} size={18} />
-              <span className="truncate">{name}</span>
-            </Link>
-          ))
-        ) : (
-          <span className="text-xs text-muted">Unassigned</span>
-        )}
+      <div className="min-w-0">
+        <AssigneeList names={item.assignedTo} />
       </div>
       <ActionsMenu
         actions={

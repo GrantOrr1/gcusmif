@@ -9,7 +9,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ function LoginForm() {
     setError(null);
 
     const result = await signIn("credentials", {
-      email,
+      username,
       password,
       redirect: false,
     });
@@ -29,7 +29,7 @@ function LoginForm() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password.");
+      setError("Invalid username or password.");
       return;
     }
 
@@ -47,15 +47,15 @@ function LoginForm() {
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>
-          <label htmlFor="email" className="text-sm font-medium text-foreground">
-            Email
+          <label htmlFor="username" className="text-sm font-medium text-foreground">
+            Username
           </label>
           <input
-            id="email"
-            type="email"
+            id="username"
+            type="text"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
           />
         </div>

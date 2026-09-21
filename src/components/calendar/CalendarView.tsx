@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { CalendarEvent } from "@/lib/calendarStore";
-import type { RecurringEvent } from "@/lib/recurringEvents";
+import type { RecurringEvent, RecurringException } from "@/lib/recurringEvents";
 import { EVENT_COLOR_OPTIONS, EARNINGS_COLOR, formatTime12, weekdayName } from "@/lib/calendarColors";
 import { slugifyName } from "@/lib/team";
 import Avatar from "@/components/team/Avatar";
@@ -33,11 +33,14 @@ function formatTimeRange(start: string | null, end: string | null): string | nul
   return formatTime12(start ?? end!);
 }
 
-type Selection = { kind: "event"; id: number } | { kind: "recurring"; id: number };
+type Selection =
+  | { kind: "event"; id: number }
+  | { kind: "recurring"; id: number; date: string };
 
 export default function CalendarView({
   initialEvents,
   initialRecurring,
+  initialExceptions,
   equityOptions,
   canAdd,
   myName,
@@ -45,6 +48,7 @@ export default function CalendarView({
 }: {
   initialEvents: EnrichedEvent[];
   initialRecurring: RecurringEvent[];
+  initialExceptions: RecurringException[];
   equityOptions: { ticker: string; companyName: string | null }[];
   canAdd: boolean;
   myName: string | null;
@@ -57,6 +61,7 @@ export default function CalendarView({
   });
   const [events, setEvents] = useState(initialEvents);
   const [recurring, setRecurring] = useState(initialRecurring);
+  const [exceptions, setExceptions] = useState(initialExceptions);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [addDate, setAddDate] = useState<string | null>(null);
   const [hoverInfo, setHoverInfo] = useState<{
@@ -73,6 +78,7 @@ export default function CalendarView({
   const [recurringEnd, setRecurringEnd] = useState("");
   const [savingRecurring, setSavingRecurring] = useState(false);
   const [recurringError, setRecurringError] = useState<string | null>(null);
+  const [confirmDeleteRecurring, setConfirmDeleteRecurring] = useState(false);
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, EnrichedEvent[]>();
@@ -84,9 +90,20 @@ export default function CalendarView({
     return map;
   }, [events]);
 
+  const exceptionKeys = useMemo(
+    () => new Set(exceptions.map((ex) => `${ex.recurringEventId}|${ex.date}`)),
+    [exceptions]
+  );
+
   const selectedEvent = selection?.kind === "event" ? (events.find((e) => e.id === selection.id) ?? null) : null;
   const selectedRecurring =
     selection?.kind === "recurring" ? (recurring.find((r) => r.id === selection.id) ?? null) : null;
+  const selectedRecurringDate = selection?.kind === "recurring" ? selection.date : null;
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setConfirmDeleteRecurring(false);
+  }, [selection]);
 
   const cells = useMemo(() => {
     const firstWeekday = new Date(year, month, 1).getDay();
@@ -154,16 +171,21 @@ export default function CalendarView({
     setEditingRecurring(true);
   }
 
-  async function handleDeleteRecurring(id: number) {
+  async function handleDeleteRecurring(id: number, date: string) {
     setSavingRecurring(true);
     setRecurringError(null);
+    setConfirmDeleteRecurring(false);
     try {
-      const res = await fetch(`/api/calendar/recurring/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/calendar/recurring/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date }),
+      });
       if (!res.ok) {
         setRecurringError("Could not delete. Try again.");
         return;
       }
-      setRecurring((prev) => prev.filter((r) => r.id !== id));
+      setExceptions((prev) => [...prev, { recurringEventId: id, date }]);
       setSelection(null);
     } catch {
       setRecurringError("Could not delete. Try again.");
@@ -243,7 +265,11 @@ export default function CalendarView({
 
           {cells.map((cell, i) => {
             const dayEvents = cell.dateKey ? (eventsByDate.get(cell.dateKey) ?? []) : [];
-            const dayRecurring = cell.inMonth ? recurring.filter((r) => r.weekday === cell.weekday) : [];
+            const dayRecurring = cell.inMonth
+              ? recurring.filter(
+                  (r) => r.weekday === cell.weekday && !exceptionKeys.has(`${r.id}|${cell.dateKey}`)
+                )
+              : [];
             const isToday =
               cell.inMonth &&
               cell.dateKey === toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
@@ -278,7 +304,7 @@ export default function CalendarView({
                   {dayRecurring.map((r) => (
                     <button
                       key={`r-${r.id}`}
-                      onClick={() => setSelection({ kind: "recurring", id: r.id })}
+                      onClick={() => setSelection({ kind: "recurring", id: r.id, date: cell.dateKey! })}
                       onMouseEnter={(ev) => {
                         const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
                         setHoverInfo({
@@ -338,6 +364,16 @@ export default function CalendarView({
               Every {weekdayName(selectedRecurring.weekday)},{" "}
               {formatTimeRange(selectedRecurring.startTime, selectedRecurring.endTime)}
             </p>
+            {selectedRecurringDate && (
+              <p className="mt-0.5 text-xs text-muted">
+                Viewing{" "}
+                {new Date(`${selectedRecurringDate}T00:00:00`).toLocaleDateString(undefined, {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
+            )}
             <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted">
               {selectedRecurring.description || "No description."}
             </p>
@@ -391,11 +427,11 @@ export default function CalendarView({
                         Edit Time
                       </button>
                       <button
-                        onClick={() => handleDeleteRecurring(selectedRecurring.id)}
+                        onClick={() => setConfirmDeleteRecurring(true)}
                         disabled={savingRecurring}
                         className="rounded-md border border-negative/40 px-3 py-1.5 text-xs font-medium text-negative hover:bg-negative/10 disabled:opacity-60"
                       >
-                        {savingRecurring ? "Deleting…" : "Delete Event"}
+                        {savingRecurring ? "Deleting…" : "Delete This Occurrence"}
                       </button>
                     </div>
                   </div>
@@ -490,6 +526,41 @@ export default function CalendarView({
             setAddDate(null);
           }}
         />
+      )}
+
+      {confirmDeleteRecurring && selectedRecurring && selectedRecurringDate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 text-center shadow-xl">
+            <h2 className="text-lg font-bold text-foreground">
+              Are you sure you want to delete &ldquo;{selectedRecurring.title}&rdquo; on{" "}
+              {new Date(`${selectedRecurringDate}T00:00:00`).toLocaleDateString(undefined, {
+                month: "long",
+                day: "numeric",
+              })}
+              ?
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              This only removes this single occurrence — the standing weekly {selectedRecurring.title}{" "}
+              stays on every other {weekdayName(selectedRecurring.weekday)}. This cannot be undone.
+            </p>
+            <div className="mt-6 flex gap-2">
+              <button
+                onClick={() => handleDeleteRecurring(selectedRecurring.id, selectedRecurringDate)}
+                disabled={savingRecurring}
+                className="flex-1 rounded-md bg-negative px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {savingRecurring ? "Deleting…" : "Delete"}
+              </button>
+              <button
+                onClick={() => setConfirmDeleteRecurring(false)}
+                disabled={savingRecurring}
+                className="flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

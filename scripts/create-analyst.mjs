@@ -5,12 +5,12 @@ import { stdin, stdout } from "node:process";
 const rl = readline.createInterface({ input: stdin, output: stdout });
 
 const name = await rl.question("Analyst name: ");
-const email = await rl.question("Analyst email: ");
+const username = await rl.question("Analyst username: ");
 const password = await rl.question("Temporary password: ");
 rl.close();
 
 const passwordHash = await bcrypt.hash(password, 12);
-const entry = { name, email, passwordHash };
+const entry = { name, username, passwordHash };
 
 // Next.js expands unescaped `$` in .env files as variable references, which
 // corrupts a bcrypt hash (it's full of `$`). Escape them for the .env value.

@@ -13,17 +13,18 @@ import {
 } from "@/lib/format";
 import { ratingTone } from "@/lib/ratings";
 import EquityReturnChart from "@/components/equity/EquityReturnChart";
-import { EpsDotPlot, RevenueEarningsChart } from "@/components/equity/EarningsCharts";
+import { EpsDotPlot, RevenueEarningsChart, EbitdaRevenueChart } from "@/components/equity/EarningsCharts";
 import KpiCard from "@/components/portfolio/KpiCard";
 import { listApprovedReportsForTicker } from "@/lib/reportUploads";
 import { getCoverageForTicker } from "@/lib/coverageStore";
 import { TEAM } from "@/data/team";
 import { slugifyName } from "@/lib/team";
 import Avatar from "@/components/team/Avatar";
+import AssigneeList from "@/components/team/AssigneeList";
 
 const TYPE_LABELS: Record<string, string> = {
   equity_report: "Equity Report",
-  coverage_watchlist_report: "Coverage Watchlist Report",
+  coverage_watchlist_report: "Watchlist Report",
   financial_model: "Financial Model",
 };
 
@@ -51,6 +52,11 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
   if (!quote) notFound();
 
   const holding = portfolio.holdings.find((h) => h.ticker === ticker);
+  const ytdHolding = portfolio.ytdHoldings.find((h) => h.ticker === ticker);
+  const gainSinceBought =
+    holding?.totalValue != null && holding?.totalValuePaid != null
+      ? holding.totalValue - holding.totalValuePaid
+      : null;
   const reports = listApprovedReportsForTicker(ticker);
   const sectorInfo = holding?.sector ? sectorByCode(holding.sector) : undefined;
   const coverage = getCoverageForTicker(ticker);
@@ -62,7 +68,7 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
   const up = (quote.change ?? 0) >= 0;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div id="top" className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <Link
         href={sectorInfo ? `/portfolio/${sectorInfo.slug}` : "/portfolio"}
         className="text-sm text-muted hover:text-foreground"
@@ -85,6 +91,14 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
             >
               Open Filings
             </a>
+            {holding && (
+              <a
+                href="#smif-rating"
+                className="rounded-md border border-brand bg-brand px-2 py-0.5 text-xs font-medium text-white hover:bg-brand-hover"
+              >
+                Jump to Position
+              </a>
+            )}
           </div>
         </div>
         <div className="text-right">
@@ -135,7 +149,7 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
       )}
 
       <div className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold text-foreground">Summary</h2>
+        <h2 className="mb-3 text-lg font-semibold text-foreground">Equity Summary</h2>
         <div className="grid gap-x-8 rounded-lg border border-border bg-surface p-4 sm:grid-cols-2">
           <dl>
             <SummaryRow
@@ -201,6 +215,43 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
             <p className="mb-3 text-sm font-medium text-foreground">Revenue vs. Earnings</p>
             <RevenueEarningsChart points={summary?.earningsQuarters ?? []} />
           </div>
+          <div className="rounded-lg border border-border bg-surface p-4">
+            <p className="mb-3 text-sm font-medium text-foreground">
+              EBITDA &amp; Revenue — Last {summary?.earningsQuarters.length ?? 0} Quarters
+            </p>
+            <EbitdaRevenueChart points={summary?.earningsQuarters ?? []} />
+          </div>
+          <div className="rounded-lg border border-border bg-surface p-4">
+            <p className="mb-3 text-sm font-medium text-foreground">Recent Quarter Snapshot</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <KpiCard
+                compact
+                label="Operating Margin"
+                value={formatPercent(summary?.operatingMarginRecentQuarter ?? null)}
+              />
+              <KpiCard
+                compact
+                label="Net Margin"
+                value={formatPercent(summary?.netMarginRecentQuarter ?? null)}
+              />
+              <KpiCard
+                compact
+                label="Revenue Growth (YoY)"
+                value={formatPercent(summary?.revenueGrowth ?? null)}
+              />
+              <KpiCard
+                compact
+                label="Current Ratio"
+                value={summary?.currentRatio != null ? summary.currentRatio.toFixed(2) : "—"}
+              />
+              <KpiCard
+                compact
+                label="Debt / Equity"
+                value={summary?.debtToEquity != null ? summary.debtToEquity.toFixed(2) : "—"}
+              />
+              <KpiCard compact label="Operating NWC" value={formatCompactCurrency(summary?.operatingNWC ?? null)} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -256,7 +307,7 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
 
             <div className="mt-6 flex flex-1 flex-col gap-6">
               {holding && (
-                <div className="shrink-0">
+                <div id="smif-rating" className="shrink-0 scroll-mt-20">
                   <h3 className="mb-2 text-sm font-semibold text-foreground">SMIF Rating</h3>
                   <div className="flex flex-col gap-3">
                     <KpiCard
@@ -288,21 +339,37 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
                 </p>
                 {reports.length > 0 ? (
                   <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                    {reports.map((report) => (
-                      <a
-                        key={report.id}
-                        href={`/api/reports/file/${report.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block rounded-md border border-border bg-background p-2 hover:border-brand"
-                      >
-                        <p className="truncate text-sm font-medium text-foreground">{report.title}</p>
-                        <p className="text-xs text-muted">
-                          {TYPE_LABELS[report.reportType] ?? report.reportType} ·{" "}
-                          {report.reportType === "financial_model" ? "Download" : "View"}
-                        </p>
-                      </a>
-                    ))}
+                    {reports.map((report) => {
+                      return (
+                        <div
+                          key={report.id}
+                          className="flex items-center justify-between gap-3 rounded-md border border-border bg-background p-2 hover:border-brand"
+                        >
+                          <a
+                            href={`/api/reports/file/${report.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="min-w-0 flex-1"
+                          >
+                            <p className="truncate text-sm font-medium text-foreground">{report.title}</p>
+                            <p className="text-xs text-muted">
+                              {TYPE_LABELS[report.reportType] ?? report.reportType} ·{" "}
+                              {report.reportType === "financial_model" ? "Download" : "View"}
+                            </p>
+                          </a>
+                          <div className="flex shrink-0 flex-col items-end gap-0.5">
+                            <AssigneeList
+                              names={[report.uploadedBy, ...report.coAuthors]}
+                              avatarSize={18}
+                            />
+                            <p className="whitespace-nowrap text-xs text-muted">
+                              Published{" "}
+                              {new Date(report.reviewedAt ?? report.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-muted">No reports uploaded for this equity yet.</p>
@@ -312,7 +379,17 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
           </div>
 
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-foreground">Financial Highlights</h3>
+            <div className="mb-2 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-foreground">Financial Highlights</h3>
+              <a
+                href={edgarFilingsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md border border-border px-2 py-0.5 text-xs font-medium text-muted hover:border-brand hover:text-foreground"
+              >
+                Open Filings
+              </a>
+            </div>
             <div className="rounded-lg border border-border bg-surface p-4">
               <dl>
                 <SummaryRow
@@ -401,14 +478,29 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
 
       {holding && (
         <div className="mt-10">
-          <h2 className="mb-3 text-lg font-semibold text-foreground">
-            {holding.companyName ?? ticker} in the Fund
-          </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <KpiCard compact label="Shares Held" value={formatNumber(holding.quantity)} />
-            <KpiCard compact label="Price Paid" value={formatPrice(holding.pricePaid)} />
-            <KpiCard compact label="Market Value" value={formatCurrency(holding.totalValue)} />
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold text-foreground">SMIF Position</h2>
+            <a
+              href="#top"
+              className="rounded-md border border-brand bg-brand px-2 py-0.5 text-xs font-medium text-white hover:bg-brand-hover"
+            >
+              Jump to Top
+            </a>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             <KpiCard compact label="Sector" value={holding.sector ?? "—"} />
+            <KpiCard compact label="Shares" value={formatNumber(holding.quantity)} />
+            <KpiCard compact label="Value" value={formatCurrency(holding.totalValue)} />
+            <KpiCard compact label="Average Cost" value={formatPrice(holding.pricePaid)} />
+            <KpiCard compact label="Jan 1 Price" value={formatPrice(ytdHolding?.priceJan1 ?? null)} />
+            <KpiCard
+              compact
+              label="Gain Since Bought ($)"
+              value={formatCurrency(gainSinceBought)}
+              tone={
+                gainSinceBought === null ? "neutral" : gainSinceBought >= 0 ? "positive" : "negative"
+              }
+            />
             <KpiCard
               compact
               label="Return Since Purchase"

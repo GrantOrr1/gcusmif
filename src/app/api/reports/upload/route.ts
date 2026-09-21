@@ -77,6 +77,22 @@ export async function POST(req: NextRequest) {
   const rawTitle = formData.get("title");
   const title = typeof rawTitle === "string" && rawTitle.trim() ? rawTitle.trim() : file.name;
 
+  const rawCoAuthors = formData.get("coAuthors");
+  let coAuthors: string[] = [];
+  if (typeof rawCoAuthors === "string" && rawCoAuthors.trim()) {
+    try {
+      const parsed = JSON.parse(rawCoAuthors);
+      if (Array.isArray(parsed)) {
+        const validNames = new Set(TEAM.map((m) => m.name));
+        coAuthors = [...new Set(parsed.filter((n): n is string => typeof n === "string" && validNames.has(n)))].filter(
+          (n) => n !== me.name
+        );
+      }
+    } catch {
+      coAuthors = [];
+    }
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
   const storedFileName = saveUploadedFile(file.name, buffer);
 
@@ -96,6 +112,7 @@ export async function POST(req: NextRequest) {
       : "application/pdf"),
     sector: me.sector ?? "Unassigned",
     uploadedBy: me.name,
+    coAuthors,
     status: autoApproved ? "approved" : "pending",
     reviewedBy: autoApproved ? me.name : null,
   });

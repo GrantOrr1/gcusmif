@@ -95,9 +95,25 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS recurring_event_exceptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recurring_event_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    created_by TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(recurring_event_id, date)
+  );
+
   CREATE TABLE IF NOT EXISTS site_pages (
     slug TEXT PRIMARY KEY,
     content TEXT NOT NULL,
+    updated_by TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS social_links (
+    platform TEXT PRIMARY KEY,
+    url TEXT,
     updated_by TEXT,
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -128,6 +144,9 @@ if (!reportUploadColumns.includes("ticker")) {
 if (!reportUploadColumns.includes("company_name")) {
   db.exec("ALTER TABLE report_uploads ADD COLUMN company_name TEXT");
 }
+if (!reportUploadColumns.includes("co_authors")) {
+  db.exec("ALTER TABLE report_uploads ADD COLUMN co_authors TEXT");
+}
 
 const watchlistColumns = (db.prepare("PRAGMA table_info(watchlist_items)").all() as { name: string }[]).map(
   (c) => c.name
@@ -147,6 +166,9 @@ const profileOverrideColumns = (
 ).map((c) => c.name);
 if (!profileOverrideColumns.includes("photo_file")) {
   db.exec("ALTER TABLE profile_overrides ADD COLUMN photo_file TEXT");
+}
+if (!profileOverrideColumns.includes("email")) {
+  db.exec("ALTER TABLE profile_overrides ADD COLUMN email TEXT");
 }
 
 const calendarEventColumns = (

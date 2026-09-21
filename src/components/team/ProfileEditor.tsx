@@ -9,16 +9,19 @@ export default function ProfileEditor({
   name,
   initialBio,
   initialLinkedinUrl,
+  initialEmail,
 }: {
   slug: string;
   name: string;
   initialBio: string | null;
   initialLinkedinUrl: string | null;
+  initialEmail: string | null;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState(initialBio ?? "");
   const [linkedinUrl, setLinkedinUrl] = useState(initialLinkedinUrl ?? "");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,10 +32,11 @@ export default function ProfileEditor({
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, bio, linkedinUrl }),
+        body: JSON.stringify({ slug, bio, linkedinUrl, email }),
       });
       if (!res.ok) {
-        setError("Could not save. Try again.");
+        const body = await res.json().catch(() => null);
+        setError(body?.error ?? "Could not save. Try again.");
         return;
       }
       setEditing(false);
@@ -80,6 +84,18 @@ export default function ProfileEditor({
         placeholder="https://linkedin.com/in/your-profile"
         className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
       />
+
+      <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
+        Email
+      </label>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="you@my.gcu.edu"
+        className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+      />
+      <p className="mt-1 text-xs text-muted">Shown as the mail icon next to your name.</p>
 
       {error && <p className="mt-2 text-xs text-negative">{error}</p>}
 

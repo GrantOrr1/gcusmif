@@ -253,6 +253,11 @@ export type QuoteSummaryDetails = {
   operatingCashflow: number | null;
   freeCashflow: number | null;
 
+  // Most recent reported quarter
+  operatingMarginRecentQuarter: number | null;
+  netMarginRecentQuarter: number | null;
+  operatingNWC: number | null;
+
   // Earnings trends — last 4 quarters
   earningsQuarters: EarningsQuarter[];
 };
@@ -265,6 +270,7 @@ export type EarningsQuarter = {
   epsNormalized: number | null;
   revenue: number | null;
   earnings: number | null;
+  ebitda: number | null;
 };
 
 function rawNumber(field: unknown): number | null {
@@ -428,12 +434,18 @@ export async function getQuoteSummaryDetails(symbol: string): Promise<QuoteSumma
     "quarterlyTotalRevenue",
     "quarterlyNetIncome",
     "quarterlyNormalizedIncome",
+    "quarterlyEBITDA",
+    "quarterlyOperatingIncome",
+    "quarterlyWorkingCapital",
   ]).catch(() => ({}) as Record<string, FundamentalsSeries>);
 
   const dilutedEps = fundamentals.quarterlyDilutedEPS ?? new Map();
   const totalRevenue = fundamentals.quarterlyTotalRevenue ?? new Map();
   const netIncome = fundamentals.quarterlyNetIncome ?? new Map();
   const normalizedIncome = fundamentals.quarterlyNormalizedIncome ?? new Map();
+  const quarterlyEbitda = fundamentals.quarterlyEBITDA ?? new Map();
+  const operatingIncome = fundamentals.quarterlyOperatingIncome ?? new Map();
+  const workingCapital = fundamentals.quarterlyWorkingCapital ?? new Map();
 
   const quarterDates = Array.from(dilutedEps.keys()).sort();
   const earningsQuarters: EarningsQuarter[] = quarterDates.slice(-4).map((date) => {
@@ -453,8 +465,26 @@ export async function getQuoteSummaryDetails(symbol: string): Promise<QuoteSumma
       epsNormalized,
       revenue: totalRevenue.get(date) ?? null,
       earnings: net,
+      ebitda: quarterlyEbitda.get(date) ?? null,
     };
   });
+
+  const mostRecentOpIncomeDate = Array.from(operatingIncome.keys()).sort().at(-1);
+  const recentOpIncome = mostRecentOpIncomeDate ? (operatingIncome.get(mostRecentOpIncomeDate) ?? null) : null;
+  const recentOpRevenue = mostRecentOpIncomeDate ? (totalRevenue.get(mostRecentOpIncomeDate) ?? null) : null;
+  const operatingMarginRecentQuarter =
+    recentOpIncome !== null && recentOpRevenue ? recentOpIncome / recentOpRevenue : null;
+
+  const mostRecentNetIncomeDate = Array.from(netIncome.keys()).sort().at(-1);
+  const recentNetIncome = mostRecentNetIncomeDate ? (netIncome.get(mostRecentNetIncomeDate) ?? null) : null;
+  const recentNetRevenue = mostRecentNetIncomeDate ? (totalRevenue.get(mostRecentNetIncomeDate) ?? null) : null;
+  const netMarginRecentQuarter =
+    recentNetIncome !== null && recentNetRevenue ? recentNetIncome / recentNetRevenue : null;
+
+  const mostRecentWorkingCapitalDate = Array.from(workingCapital.keys()).sort().at(-1);
+  const operatingNWC = mostRecentWorkingCapitalDate
+    ? (workingCapital.get(mostRecentWorkingCapitalDate) ?? null)
+    : null;
 
   return {
     open: rawNumber(summaryDetail.open),
@@ -503,6 +533,10 @@ export async function getQuoteSummaryDetails(symbol: string): Promise<QuoteSumma
     bookValue: rawNumber(keyStats.bookValue),
     operatingCashflow: rawNumber(financialData.operatingCashflow),
     freeCashflow: rawNumber(financialData.freeCashflow),
+
+    operatingMarginRecentQuarter,
+    netMarginRecentQuarter,
+    operatingNWC,
 
     earningsQuarters,
   };

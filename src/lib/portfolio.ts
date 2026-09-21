@@ -391,6 +391,13 @@ function sheetToRows(workbook: XLSX.WorkBook, name: string): Row[] {
   });
 }
 
+/** Reads a specific cell (e.g. "M36") straight off a sheet by its own formula result. */
+function readCell(workbook: XLSX.WorkBook, sheetName: string, address: string): number | null {
+  const sheet = workbook.Sheets[sheetName];
+  const cell = sheet?.[address];
+  return typeof cell?.v === "number" && Number.isFinite(cell.v) ? cell.v : null;
+}
+
 const CACHE_TTL_MS = Number(process.env.PORTFOLIO_CACHE_TTL_MS ?? 5 * 60 * 1000);
 
 let cache: { data: PortfolioData; fetchedAt: number } | null = null;
@@ -414,7 +421,10 @@ async function loadPortfolioData(): Promise<PortfolioData> {
     const parsed = parseYtdSheet(ytdRows);
     ytdHoldings = parsed.ytdHoldings;
     ytdSectorPerformance = parsed.ytdSectorPerformance;
-    ytdPortfolioReturn = parsed.ytdPortfolioReturn;
+    // M36 is the sheet's own official YTD return — it folds in realized
+    // gains from positions sold during the year via the adjustment rows
+    // above it, which a plain sum of the still-held rows below would miss.
+    ytdPortfolioReturn = readCell(workbook, ytdSheetName, "M36") ?? parsed.ytdPortfolioReturn;
   }
 
   return {

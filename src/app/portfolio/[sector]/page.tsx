@@ -6,10 +6,15 @@ import { getPortfolioPerformance, dailyReturnFor, weeklyReturnFor } from "@/lib/
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { TEAM } from "@/data/team";
 import { slugifyName } from "@/lib/team";
+import { getSectorIndustryNews } from "@/lib/industryNews";
 import KpiCard from "@/components/portfolio/KpiCard";
 import HoldingsTable from "@/components/portfolio/HoldingsTable";
 import SectorPerformanceChart from "@/components/portfolio/SectorPerformanceChart";
+import IndustryNews from "@/components/portfolio/IndustryNews";
 import Avatar from "@/components/team/Avatar";
+import TopMovers from "@/components/portfolio/TopMovers";
+import HoldingsPerformancePanel from "@/components/portfolio/HoldingsPerformancePanel";
+import SectorPieChart from "@/components/portfolio/SectorPieChart";
 
 export default async function SectorPage({ params }: PageProps<"/portfolio/[sector]">) {
   const { sector: slug } = await params;
@@ -27,12 +32,44 @@ export default async function SectorPage({ params }: PageProps<"/portfolio/[sect
   const totalCost = holdings.reduce((sum, h) => sum + (h.totalValuePaid ?? 0), 0);
   const totalReturn = totalCost > 0 ? totalValue / totalCost - 1 : null;
 
-  const [ytdSeries, fiveDaySeries] = await Promise.all([
+  const [ytdSeries, fiveDaySeries, industryNews] = await Promise.all([
     getPortfolioPerformance("ytd"),
     getPortfolioPerformance("5d"),
+    getSectorIndustryNews(sectorInfo.code).catch(() => []),
   ]);
   const dailyReturn = dailyReturnFor(fiveDaySeries, { sector: sectorInfo.code });
   const weeklyReturn = weeklyReturnFor(fiveDaySeries, { sector: sectorInfo.code });
+
+  const topMovers = holdings
+    .map((h) => {
+      const weeklyReturn = weeklyReturnFor(fiveDaySeries, { ticker: h.ticker });
+      const priceChange =
+        weeklyReturn !== null && h.currentPrice !== null
+          ? h.currentPrice - h.currentPrice / (1 + weeklyReturn)
+          : null;
+      return {
+        ticker: h.ticker,
+        companyName: h.companyName,
+        weeklyReturn,
+        priceChange,
+      };
+    })
+    .filter(
+      (
+        m
+      ): m is {
+        ticker: string;
+        companyName: string | null;
+        weeklyReturn: number;
+        priceChange: number | null;
+      } => m.weeklyReturn !== null
+    )
+    .sort((a, b) => Math.abs(b.weeklyReturn) - Math.abs(a.weeklyReturn))
+    .slice(0, 5);
+
+  const holdingsAllocation = holdings
+    .filter((h) => h.totalValue !== null && h.totalValue > 0)
+    .map((h) => ({ sector: h.ticker, value: (h.totalValue ?? 0) / (totalValue || 1) }));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
@@ -89,30 +126,56 @@ export default async function SectorPage({ params }: PageProps<"/portfolio/[sect
             </Link>
           )}
 
-          <div className="flex flex-1 flex-col justify-between">
-            <KpiCard compact label="Sector Value" value={formatCurrency(totalValue)} />
+          <div className="flex flex-1 flex-col justify-between gap-2">
+            <KpiCard compact evenHeight={false} label="Sector Value" value={formatCurrency(totalValue)} />
             <KpiCard
               compact
+              evenHeight={false}
               label="Sector Return"
               value={formatPercent(totalReturn)}
               tone={totalReturn === null ? "neutral" : totalReturn >= 0 ? "positive" : "negative"}
             />
             <KpiCard
               compact
+              evenHeight={false}
               label="Daily Return"
               value={formatPercent(dailyReturn)}
               tone={dailyReturn === null ? "neutral" : dailyReturn >= 0 ? "positive" : "negative"}
             />
             <KpiCard
               compact
+              evenHeight={false}
               label="Weekly Return"
               value={formatPercent(weeklyReturn)}
               tone={
                 weeklyReturn === null ? "neutral" : weeklyReturn >= 0 ? "positive" : "negative"
               }
             />
-            <KpiCard compact label="Holdings" value={holdings.length.toString()} />
-            <KpiCard compact label="Cost Basis" value={formatCurrency(totalCost)} />
+            <KpiCard compact evenHeight={false} label="Holdings" value={holdings.length.toString()} />
+            <KpiCard compact evenHeight={false} label="Cost Basis" value={formatCurrency(totalCost)} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col">
+          <h2 className="mb-3 text-lg font-semibold text-foreground">Top Weekly Movers</h2>
+          <div className="flex-1 rounded-lg border border-border bg-surface p-4">
+            <TopMovers movers={topMovers} />
+          </div>
+        </div>
+
+        <div className="flex flex-col">
+          <h2 className="mb-3 text-lg font-semibold text-foreground">Holdings Performance</h2>
+          <div className="flex flex-1 flex-col rounded-lg border border-border bg-surface p-4">
+            <HoldingsPerformancePanel data={ytdSeries} tickers={holdings.map((h) => h.ticker)} />
+          </div>
+        </div>
+
+        <div className="flex flex-col">
+          <h2 className="mb-3 text-lg font-semibold text-foreground">Holdings Allocation</h2>
+          <div className="flex flex-1 items-center rounded-lg border border-border bg-surface p-4">
+            <SectorPieChart data={holdingsAllocation} variant="ticker" unitLabel="of sector" />
           </div>
         </div>
       </div>
@@ -124,6 +187,8 @@ export default async function SectorPage({ params }: PageProps<"/portfolio/[sect
           portfolioTotalValue={data.summary.totalValue}
         />
       </div>
+
+      <IndustryNews title="Industry News" items={industryNews} />
     </div>
   );
 }

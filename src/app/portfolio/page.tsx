@@ -7,12 +7,11 @@ import {
   weeklyReturnFor,
 } from "@/lib/performance";
 import { formatCurrency, formatPercent } from "@/lib/format";
-import { sortBySectorOrder } from "@/lib/sectorOrder";
 import { SECTOR_INFO } from "@/lib/sectors";
 import { TEAM } from "@/data/team";
 import { slugifyName } from "@/lib/team";
 import KpiCard from "@/components/portfolio/KpiCard";
-import SectorBarChart from "@/components/portfolio/SectorBarChart";
+import SectorPerformancePanel from "@/components/portfolio/SectorPerformancePanel";
 import SectorPieChart from "@/components/portfolio/SectorPieChart";
 import HoldingsTable from "@/components/portfolio/HoldingsTable";
 import PerformanceChart from "@/components/portfolio/PerformanceChart";
@@ -25,7 +24,7 @@ export const metadata = {
 
 export default async function PortfolioPage() {
   const data = await getPortfolioData();
-  const { summary, holdings, sectorAllocation, ytdSectorPerformance, ytdPortfolioReturn } = data;
+  const { summary, holdings, sectorAllocation, ytdPortfolioReturn } = data;
 
   const [ytdSeries, fiveDaySeries] = await Promise.all([
     getPortfolioPerformance("ytd"),
@@ -68,11 +67,6 @@ export default async function PortfolioPage() {
   // Cash isn't a covered sector, so it's excluded from these two charts.
   const sectorOrder = sectorAllocation.map((s) => s.sector);
   const displaySectorAllocation = sectorAllocation.filter((s) => s.sector !== "CASH");
-  const orderedYtdSectorPerformance = sortBySectorOrder(
-    ytdSectorPerformance.filter((s) => s.sector !== "CASH"),
-    sectorOrder,
-    (s) => s.sector
-  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
@@ -117,10 +111,11 @@ export default async function PortfolioPage() {
             </Link>
           )}
 
-          <div className="flex flex-1 flex-col justify-between">
-            <KpiCard compact label="Total Value" value={formatCurrency(summary.totalValue)} />
+          <div className="flex flex-1 flex-col justify-center gap-1.5">
+            <KpiCard compact evenHeight={false} layout="row" label="Total Value" value={formatCurrency(summary.totalValue)} />
             <KpiCard
               compact
+              evenHeight={false} layout="row"
               label="Total Return"
               value={formatPercent(summary.percentChange)}
               tone={
@@ -133,17 +128,42 @@ export default async function PortfolioPage() {
             />
             <KpiCard
               compact
+              evenHeight={false} layout="row"
               label="Total Cost Basis"
               value={formatCurrency(summary.totalValuePaid)}
             />
             <KpiCard
               compact
+              evenHeight={false} layout="row"
+              label="Realized Gain"
+              value={formatCurrency(summary.realizedGain)}
+              tone={
+                summary.realizedGain === null ? "neutral" : summary.realizedGain >= 0 ? "positive" : "negative"
+              }
+            />
+            <KpiCard
+              compact
+              evenHeight={false} layout="row"
+              label="Return Incl. Realized"
+              value={formatPercent(summary.percentChangeInclRealized)}
+              tone={
+                summary.percentChangeInclRealized === null
+                  ? "neutral"
+                  : summary.percentChangeInclRealized >= 0
+                    ? "positive"
+                    : "negative"
+              }
+            />
+            <KpiCard
+              compact
+              evenHeight={false} layout="row"
               label="Daily Return"
               value={formatPercent(dailyReturn)}
               tone={dailyReturn === null ? "neutral" : dailyReturn >= 0 ? "positive" : "negative"}
             />
             <KpiCard
               compact
+              evenHeight={false} layout="row"
               label="Weekly Return"
               value={formatPercent(weeklyReturn)}
               tone={
@@ -152,6 +172,7 @@ export default async function PortfolioPage() {
             />
             <KpiCard
               compact
+              evenHeight={false} layout="row"
               label="YTD Return"
               value={formatPercent(ytdReturn)}
               tone={ytdReturn === null ? "neutral" : ytdReturn >= 0 ? "positive" : "negative"}
@@ -168,21 +189,12 @@ export default async function PortfolioPage() {
           </div>
         </div>
 
-        {orderedYtdSectorPerformance.length > 0 && (
-          <div className="flex flex-col">
-            <h2 className="mb-3 text-lg font-semibold text-foreground">
-              YTD Sector Performance
-            </h2>
-            <div className="flex flex-1 items-center rounded-lg border border-border bg-surface p-4">
-              <SectorBarChart
-                data={orderedYtdSectorPerformance.map((s) => ({
-                  sector: s.sector,
-                  value: s.percentChange ?? 0,
-                }))}
-              />
-            </div>
+        <div className="flex flex-col">
+          <h2 className="mb-3 text-lg font-semibold text-foreground">Sector Performance</h2>
+          <div className="flex flex-1 flex-col rounded-lg border border-border bg-surface p-4">
+            <SectorPerformancePanel data={ytdSeries} sectorOrder={sectorOrder} />
           </div>
-        )}
+        </div>
 
         <div className="flex flex-col">
           <h2 className="mb-3 text-lg font-semibold text-foreground">

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { colorForSector } from "@/lib/sectorColors";
 import { sectorByCode } from "@/lib/sectors";
+import { hashColor } from "@/lib/colorHash";
 import { formatPercent } from "@/lib/format";
 
 type Slice = { sector: string; value: number };
@@ -35,7 +36,24 @@ function computeSlices(filtered: Slice[], total: number) {
   return result;
 }
 
-export default function SectorPieChart({ data }: { data: Slice[] }) {
+export default function SectorPieChart({
+  data,
+  variant = "sector",
+  unitLabel = "of portfolio",
+}: {
+  /** `sector` is the slice's identifier — a sector code by default, or a
+   * ticker when variant="ticker". A string prop (not a function) so this
+   * stays serializable when rendered from a Server Component. */
+  data: Slice[];
+  variant?: "sector" | "ticker";
+  unitLabel?: string;
+}) {
+  const colorFor = variant === "ticker" ? hashColor : colorForSector;
+  const hrefFor = (code: string): string | null => {
+    if (variant === "ticker") return `/equity/${code}`;
+    const info = sectorByCode(code);
+    return info ? `/portfolio/${info.slug}` : null;
+  };
   const router = useRouter();
   const [hovered, setHovered] = useState<{ sector: string; value: number } | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -55,8 +73,8 @@ export default function SectorPieChart({ data }: { data: Slice[] }) {
   }
 
   function goToSector(sector: string) {
-    const info = sectorByCode(sector);
-    if (info) router.push(`/portfolio/${info.slug}`);
+    const href = hrefFor(sector);
+    if (href) router.push(href);
   }
 
   return (
@@ -67,25 +85,25 @@ export default function SectorPieChart({ data }: { data: Slice[] }) {
             cx={r}
             cy={r}
             r={r}
-            fill={colorForSector(slices[0].sector)}
+            fill={colorFor(slices[0].sector)}
             onMouseMove={handleMouseMove}
             onMouseEnter={() => setHovered(slices[0])}
             onMouseLeave={() => setHovered(null)}
             onClick={() => goToSector(slices[0].sector)}
-            className={sectorByCode(slices[0].sector) ? "cursor-pointer" : undefined}
+            className={hrefFor(slices[0].sector) ? "cursor-pointer" : undefined}
           />
         ) : (
           slices.map((s) => (
             <path
               key={s.sector}
               d={arcPath(r, r, r, s.startAngle, s.endAngle)}
-              fill={colorForSector(s.sector)}
+              fill={colorFor(s.sector)}
               onMouseMove={handleMouseMove}
               onMouseEnter={() => setHovered(s)}
               onMouseLeave={() => setHovered(null)}
               onClick={() => goToSector(s.sector)}
               className={`transition-opacity hover:opacity-80 ${
-                sectorByCode(s.sector) ? "cursor-pointer" : ""
+                hrefFor(s.sector) ? "cursor-pointer" : ""
               }`}
             />
           ))
@@ -99,13 +117,13 @@ export default function SectorPieChart({ data }: { data: Slice[] }) {
             onMouseLeave={() => setHovered(null)}
             onClick={() => goToSector(s.sector)}
             className={`flex items-center justify-between text-sm ${
-              sectorByCode(s.sector) ? "cursor-pointer hover:opacity-80" : "cursor-default"
+              hrefFor(s.sector) ? "cursor-pointer hover:opacity-80" : "cursor-default"
             }`}
           >
             <span className="flex items-center gap-2">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: colorForSector(s.sector) }}
+                style={{ backgroundColor: colorFor(s.sector) }}
               />
               <span className="text-muted">{s.sector}</span>
             </span>
@@ -120,7 +138,9 @@ export default function SectorPieChart({ data }: { data: Slice[] }) {
           style={{ left: mousePos.x + 12, top: mousePos.y + 12 }}
         >
           <p className="font-semibold text-foreground">{hovered.sector}</p>
-          <p className="text-muted">{formatPercent(hovered.value, 1)} of portfolio</p>
+          <p className="text-muted">
+            {formatPercent(hovered.value, 1)} {unitLabel}
+          </p>
         </div>
       )}
     </div>

@@ -5,12 +5,20 @@ import { teamBySlug, slugifyName, teammatesInSector, sectorHeads, isSamePerson }
 import { getEffectiveProfile } from "@/lib/teamProfile";
 import { getPortfolioData } from "@/lib/portfolio";
 import { listCoverageForPerson } from "@/lib/coverageStore";
+import { listApprovedReportsByUploader } from "@/lib/reportUploads";
 import { sectorByLabel } from "@/lib/sectors";
 import { formatPercent } from "@/lib/format";
 import Avatar from "@/components/team/Avatar";
+import AssigneeList from "@/components/team/AssigneeList";
 import LinkedInBadge from "@/components/team/LinkedInBadge";
 import EmailBadge from "@/components/team/EmailBadge";
 import ProfileEditor from "@/components/team/ProfileEditor";
+
+const TYPE_LABELS: Record<string, string> = {
+  equity_report: "Equity Report",
+  coverage_watchlist_report: "Watchlist Report",
+  financial_model: "Financial Model",
+};
 
 export default async function PersonPage({ params }: PageProps<"/team/[slug]">) {
   const { slug } = await params;
@@ -36,6 +44,7 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
   const sectorInfo = person.sector ? sectorByLabel(person.sector) : undefined;
   const coverageTickers = new Set(listCoverageForPerson(person.name).map((c) => c.ticker));
   const coverageHoldings = portfolio.holdings.filter((h) => coverageTickers.has(h.ticker));
+  const myReports = listApprovedReportsByUploader(person.name);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
@@ -50,7 +59,7 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
             <div className="flex items-center justify-center gap-2 sm:justify-start">
               <h1 className="text-2xl font-bold text-foreground">{person.name}</h1>
               <LinkedInBadge url={profile.linkedinUrl ?? undefined} />
-              <EmailBadge email={person.email} />
+              <EmailBadge email={profile.email ?? undefined} />
             </div>
             <p className="text-brand">{person.role}</p>
             {person.sector && !person.role.includes(person.sector) && (
@@ -66,6 +75,7 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
                 name={person.name}
                 initialBio={profile.bio}
                 initialLinkedinUrl={profile.linkedinUrl}
+                initialEmail={profile.email}
               />
             )}
           </div>
@@ -129,6 +139,48 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
                 </ul>
               ) : (
                 <p className="text-xs text-muted">No watchlist equities yet.</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="mb-2 text-sm font-semibold text-foreground">Reports</h2>
+            <div className="rounded-lg border border-border bg-surface p-3">
+              {myReports.length > 0 ? (
+                <ul className="space-y-2">
+                  {myReports.map((report) => (
+                    <li key={report.id} className="flex items-center justify-between gap-3">
+                      <a
+                        href={`/api/reports/file/${report.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="min-w-0 flex-1 hover:text-brand"
+                      >
+                        <p className="truncate text-xs font-medium text-foreground">{report.title}</p>
+                        <p className="text-xs text-muted">
+                          {report.ticker ? `${report.ticker} · ` : ""}
+                          {TYPE_LABELS[report.reportType] ?? report.reportType}
+                        </p>
+                      </a>
+                      <div className="flex shrink-0 flex-col items-end gap-0.5">
+                        <AssigneeList
+                          names={[
+                            person.name,
+                            ...[report.uploadedBy, ...report.coAuthors].filter((n) => n !== person.name),
+                          ]}
+                          avatarSize={16}
+                          maxShown={1}
+                        />
+                        <p className="whitespace-nowrap text-xs text-muted">
+                          Published{" "}
+                          {new Date(report.reviewedAt ?? report.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted">No reports uploaded yet.</p>
               )}
             </div>
           </div>

@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 
 export type Analyst = {
-  email: string;
+  username: string;
   passwordHash: string;
   name: string;
 };
@@ -28,9 +28,9 @@ function loadAnalysts(): Analyst[] {
   return cachedAnalysts;
 }
 
-export function findAnalystByEmail(email: string): Analyst | undefined {
+export function findAnalystByUsername(username: string): Analyst | undefined {
   return loadAnalysts().find(
-    (a) => a.email.toLowerCase() === email.toLowerCase()
+    (a) => a.username.toLowerCase() === username.toLowerCase()
   );
 }
 

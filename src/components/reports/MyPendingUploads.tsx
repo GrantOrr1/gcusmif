@@ -7,7 +7,7 @@ import type { ReportUpload } from "@/lib/reportUploads";
 
 const TYPE_LABELS: Record<string, string> = {
   equity_report: "Equity Report",
-  coverage_watchlist_report: "Coverage Watchlist Report",
+  coverage_watchlist_report: "Watchlist Report",
   financial_model: "Financial Model",
 };
 

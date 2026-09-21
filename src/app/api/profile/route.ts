@@ -27,10 +27,16 @@ export async function PATCH(req: NextRequest) {
   const bio = typeof body.bio === "string" ? body.bio.trim().slice(0, 2000) : undefined;
   const linkedinUrl =
     typeof body.linkedinUrl === "string" ? body.linkedinUrl.trim().slice(0, 300) : undefined;
+  const email = typeof body.email === "string" ? body.email.trim().slice(0, 200) : undefined;
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+  }
 
   upsertProfileOverride(slug, {
     bio: bio === "" ? null : bio,
     linkedinUrl: linkedinUrl === "" ? null : linkedinUrl,
+    email: email === "" ? null : email,
   });
 
   return NextResponse.json({ ok: true });

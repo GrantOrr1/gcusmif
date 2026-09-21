@@ -5,6 +5,7 @@ import { listTickersAssignedTo } from "@/lib/watchlistStore";
 export type EffectiveProfile = {
   bio: string | null;
   linkedinUrl: string | null;
+  email: string | null;
   watchlist: string[];
 };
 
@@ -14,6 +15,7 @@ export function getEffectiveProfile(slug: string, person: TeamMember): Effective
   return {
     bio: override?.bio ?? person.bio ?? null,
     linkedinUrl: override?.linkedinUrl ?? person.linkedinUrl ?? null,
+    email: override?.email ?? person.email ?? null,
     watchlist: listTickersAssignedTo(person.name),
   };
 }

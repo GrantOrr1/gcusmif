@@ -12,10 +12,10 @@ import Avatar from "@/components/team/Avatar";
 const BASE_TABS = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
+  { href: "/markets", label: "Markets" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/coverage", label: "Coverage" },
   { href: "/reports", label: "Reports" },
-  { href: "/calendar", label: "Calendar" },
   { href: "/team", label: "Team" },
 ];
 
@@ -126,9 +126,12 @@ export default function Header() {
     return null;
   }
 
-  const TABS = canSeeManagerTabs
-    ? [...BASE_TABS.slice(0, 6), { href: "/attendance", label: "Attendance" }, BASE_TABS[6]]
-    : BASE_TABS;
+  const TABS = [
+    ...BASE_TABS.slice(0, 6),
+    ...(status === "authenticated" ? [{ href: "/calendar", label: "Calendar" }] : []),
+    ...(canSeeManagerTabs ? [{ href: "/attendance", label: "Attendance" }] : []),
+    BASE_TABS[6],
+  ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">

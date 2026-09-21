@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
 import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
-import { getRecurringEvent, updateRecurringEventTime, deleteRecurringEvent } from "@/lib/recurringEvents";
+import { getRecurringEvent, updateRecurringEventTime, addRecurringException } from "@/lib/recurringEvents";
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function requirePortfolioManager() {
   const session = await auth();
@@ -39,7 +40,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+/** Skips a single week's occurrence — the standing weekly event itself is never deleted here. */
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: idParam } = await params;
   const id = Number(idParam);
   const existing = Number.isFinite(id) ? getRecurringEvent(id) : undefined;
@@ -47,9 +49,15 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { error } = await requirePortfolioManager();
+  const { me, error } = await requirePortfolioManager();
   if (error) return error;
 
-  deleteRecurringEvent(id);
+  const body = await req.json().catch(() => null);
+  const date = typeof body?.date === "string" ? body.date : "";
+  if (!DATE_RE.test(date)) {
+    return NextResponse.json({ error: "A valid date is required" }, { status: 400 });
+  }
+
+  addRecurringException(id, date, me!.name);
   return NextResponse.json({ ok: true });
 }

@@ -8,12 +8,24 @@ import { formatPercent } from "@/lib/format";
 
 const WIDTH = 280;
 const HEIGHT = 190;
-const PADDING = { top: 22, right: 6, bottom: 20, left: 6 };
+// Bottom padding reserves room for two stacked rows below the tallest bar — the
+// value label (for a large negative bar) and the sector-name label beneath it —
+// so a large-magnitude bar's own label never collides with the sector name.
+const PADDING = { top: 22, right: 6, bottom: 34, left: 6 };
 
 export default function SectorBarChart({
   data,
+  colorFor = colorForSector,
+  hrefFor = (code: string) => {
+    const info = sectorByCode(code);
+    return info ? `/portfolio/${info.slug}` : null;
+  },
 }: {
+  /** `sector` is the bar's identifier — a sector code by default, but any key
+   * works when custom colorFor/hrefFor are supplied (e.g. a ticker). */
   data: { sector: string; value: number }[];
+  colorFor?: (code: string) => string;
+  hrefFor?: (code: string) => string | null;
 }) {
   const router = useRouter();
   const [hovered, setHovered] = useState<{ sector: string; value: number } | null>(null);
@@ -49,11 +61,14 @@ export default function SectorBarChart({
           strokeWidth={1}
         />
         {data.map((d, i) => {
-          const info = sectorByCode(d.sector);
+          const href = hrefFor(d.sector);
           const x = PADDING.left + i * slotWidth + (slotWidth - barWidth) / 2;
           const barHeight = (Math.abs(d.value) / range) * plotHeight;
           const y = d.value >= 0 ? zeroY - barHeight : zeroY;
-          const labelY = d.value >= 0 ? y - 4 : y + barHeight + 12;
+          const labelY =
+            d.value >= 0
+              ? Math.max(y - 4, 10)
+              : Math.min(y + barHeight + 12, HEIGHT - 16);
 
           return (
             <g
@@ -61,8 +76,8 @@ export default function SectorBarChart({
               onMouseMove={handleMouseMove}
               onMouseEnter={() => setHovered(d)}
               onMouseLeave={() => setHovered(null)}
-              onClick={() => info && router.push(`/portfolio/${info.slug}`)}
-              className={info ? "cursor-pointer" : undefined}
+              onClick={() => href && router.push(href)}
+              className={href ? "cursor-pointer" : undefined}
             >
               <rect
                 x={x}
@@ -70,7 +85,7 @@ export default function SectorBarChart({
                 width={barWidth}
                 height={Math.max(barHeight, 1)}
                 rx={2}
-                fill={colorForSector(d.sector)}
+                fill={colorFor(d.sector)}
                 className="transition-opacity hover:opacity-80"
               />
               <text

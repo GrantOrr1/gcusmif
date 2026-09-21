@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RangeKey, TickerPerformanceSeries } from "@/lib/performance";
-import { formatPercent, formatPointDateTime, formatShortDate } from "@/lib/format";
+import { formatNumber, formatPercent, formatPointDateTime, formatShortDate } from "@/lib/format";
 import { evenIndices } from "@/lib/chartTicks";
 
 const RANGE_LABELS: { key: RangeKey; label: string }[] = [
@@ -17,14 +17,19 @@ const RANGE_LABELS: { key: RangeKey; label: string }[] = [
 
 const WIDTH = 800;
 const HEIGHT = 320;
-const PADDING = { top: 16, right: 16, bottom: 24, left: 64 };
 
 export default function EquityReturnChart({
   ticker,
+  label = "Return Since Period Start",
+  mode = "return",
+  axisFontSize = 11,
   initialRange = "ytd",
   initialData,
 }: {
   ticker: string;
+  label?: string;
+  mode?: "return" | "price";
+  axisFontSize?: number;
   initialRange?: RangeKey;
   initialData?: TickerPerformanceSeries;
 }) {
@@ -62,15 +67,19 @@ export default function EquityReturnChart({
   }, [range, ticker]);
 
   const points = useMemo(() => data?.points ?? [], [data]);
+  const padding = useMemo(
+    () => ({ top: 16, right: 16, bottom: axisFontSize + 14, left: Math.max(64, axisFontSize * 6) }),
+    [axisFontSize]
+  );
 
   const { path, yTicks, xLabels, plotX } = useMemo(() => {
-    const plotWidth = WIDTH - PADDING.left - PADDING.right;
-    const plotHeight = HEIGHT - PADDING.top - PADDING.bottom;
+    const plotWidth = WIDTH - padding.left - padding.right;
+    const plotHeight = HEIGHT - padding.top - padding.bottom;
     if (points.length < 2) return { path: "", yTicks: [], xLabels: [], plotX: undefined };
 
-    const values = points.map((p) => p.value);
-    let min = Math.min(...values, 0);
-    let max = Math.max(...values, 0);
+    const values = points.map((p) => (mode === "price" ? p.price : p.value));
+    let min = mode === "price" ? Math.min(...values) : Math.min(...values, 0);
+    let max = mode === "price" ? Math.max(...values) : Math.max(...values, 0);
     if (min === max) {
       min -= 0.01;
       max += 0.01;
@@ -80,14 +89,14 @@ export default function EquityReturnChart({
     max += pad;
 
     function x(i: number) {
-      return PADDING.left + (i / (points.length - 1)) * plotWidth;
+      return padding.left + (i / (points.length - 1)) * plotWidth;
     }
     function y(v: number) {
-      return PADDING.top + (1 - (v - min) / (max - min)) * plotHeight;
+      return padding.top + (1 - (v - min) / (max - min)) * plotHeight;
     }
 
-    const path = points
-      .map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`)
+    const path = values
+      .map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`)
       .join(" ");
 
     const tickCount = 4;
@@ -96,40 +105,57 @@ export default function EquityReturnChart({
       return { value: v, y: y(v) };
     });
 
-    const xLabels = evenIndices(points.length, 6).map((idx) => ({
+    const maxXLabels = Math.max(2, Math.min(6, Math.floor(plotWidth / (axisFontSize * 6))));
+    const xLabels = evenIndices(points.length, maxXLabels).map((idx) => ({
       label: formatShortDate(points[idx].date),
       x: x(idx),
       idx,
     }));
 
     return { path, yTicks, xLabels, plotX: x };
-  }, [points]);
+  }, [points, mode, padding, axisFontSize]);
 
   function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
     if (!svgRef.current || points.length < 2) return;
     const rect = svgRef.current.getBoundingClientRect();
     const relX = ((e.clientX - rect.left) / rect.width) * WIDTH;
-    const plotWidth = WIDTH - PADDING.left - PADDING.right;
-    const ratio = (relX - PADDING.left) / plotWidth;
+    const plotWidth = WIDTH - padding.left - padding.right;
+    const ratio = (relX - padding.left) / plotWidth;
     const idx = Math.round(ratio * (points.length - 1));
     setHoverIndex(Math.max(0, Math.min(points.length - 1, idx)));
   }
 
   const currentReturn = points.at(-1)?.value ?? null;
+  const currentPrice = points.at(-1)?.price ?? null;
   const hoverPoint = hoverIndex !== null ? points[hoverIndex] : null;
 
   return (
     <div className="rounded-lg border border-border bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="text-lg font-semibold text-foreground">Return Since Period Start</h2>
+        <h2 className="text-lg font-semibold text-foreground">{label}</h2>
         {currentReturn !== null && (
-          <p
-            className={`text-xl font-bold ${
-              currentReturn >= 0 ? "text-positive" : "text-negative"
-            }`}
-          >
-            {formatPercent(currentReturn)}
-          </p>
+          <div className="text-right">
+            <p
+              className={`text-xl font-bold ${
+                mode === "price"
+                  ? "text-foreground"
+                  : currentReturn >= 0
+                    ? "text-positive"
+                    : "text-negative"
+              }`}
+            >
+              {mode === "price" ? formatNumber(currentPrice) : formatPercent(currentReturn)}
+            </p>
+            {mode === "price" && (
+              <p
+                className={`text-sm font-semibold ${
+                  currentReturn >= 0 ? "text-positive" : "text-negative"
+                }`}
+              >
+                {formatPercent(currentReturn)}
+              </p>
+            )}
+          </div>
         )}
       </div>
 
@@ -167,15 +193,15 @@ export default function EquityReturnChart({
             {yTicks.map((t) => (
               <g key={t.value}>
                 <line
-                  x1={PADDING.left}
-                  x2={WIDTH - PADDING.right}
+                  x1={padding.left}
+                  x2={WIDTH - padding.right}
                   y1={t.y}
                   y2={t.y}
                   stroke="var(--border)"
                   strokeWidth={1}
                 />
-                <text x={4} y={t.y + 4} fontSize={11} fill="var(--muted)">
-                  {formatPercent(t.value, 0)}
+                <text x={4} y={t.y + 4} fontSize={axisFontSize} fill="var(--muted)">
+                  {mode === "price" ? formatNumber(t.value) : formatPercent(t.value, 0)}
                 </text>
               </g>
             ))}
@@ -193,8 +219,8 @@ export default function EquityReturnChart({
               <line
                 x1={plotX(hoverIndex!)}
                 x2={plotX(hoverIndex!)}
-                y1={PADDING.top}
-                y2={HEIGHT - PADDING.bottom}
+                y1={padding.top}
+                y2={HEIGHT - padding.bottom}
                 stroke="var(--muted)"
                 strokeWidth={1}
                 strokeDasharray="3,3"
@@ -205,7 +231,7 @@ export default function EquityReturnChart({
                 key={l.idx}
                 x={l.x}
                 y={HEIGHT - 6}
-                fontSize={11}
+                fontSize={axisFontSize}
                 fill="var(--muted)"
                 textAnchor={i === 0 ? "start" : i === xLabels.length - 1 ? "end" : "middle"}
               >
@@ -219,7 +245,7 @@ export default function EquityReturnChart({
           <div className="pointer-events-none absolute left-2 top-0 rounded-md border border-border bg-surface px-2 py-1 text-xs shadow">
             <p className="font-medium text-foreground">{formatPointDateTime(hoverPoint.date)}</p>
             <p className={hoverPoint.value >= 0 ? "text-positive" : "text-negative"}>
-              {formatPercent(hoverPoint.value)}
+              {mode === "price" ? formatNumber(hoverPoint.price) : formatPercent(hoverPoint.value)}
             </p>
           </div>
         )}

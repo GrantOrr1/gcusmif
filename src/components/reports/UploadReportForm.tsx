@@ -7,7 +7,7 @@ const REPORT_TYPE_OPTIONS: { value: string; label: string; accept: string }[] = 
   { value: "equity_report", label: "Equity Report", accept: ".pdf,application/pdf" },
   {
     value: "coverage_watchlist_report",
-    label: "Coverage Watchlist Report",
+    label: "Watchlist Report",
     accept: ".pdf,application/pdf",
   },
   {
@@ -18,8 +18,9 @@ const REPORT_TYPE_OPTIONS: { value: string; label: string; accept: string }[] = 
 ];
 
 type SearchResult = { symbol: string; name: string };
+type TeamMember = { name: string; role: string };
 
-export default function UploadReportForm() {
+export default function UploadReportForm({ teamMembers = [] }: { teamMembers?: TeamMember[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reportType, setReportType] = useState(REPORT_TYPE_OPTIONS[0].value);
@@ -28,9 +29,14 @@ export default function UploadReportForm() {
   const [tickerQuery, setTickerQuery] = useState("");
   const [tickerResults, setTickerResults] = useState<SearchResult[]>([]);
   const [selectedTicker, setSelectedTicker] = useState<SearchResult | null>(null);
+  const [coAuthors, setCoAuthors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  function toggleCoAuthor(name: string) {
+    setCoAuthors((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
+  }
 
   const selectedType = REPORT_TYPE_OPTIONS.find((t) => t.value === reportType)!;
 
@@ -66,6 +72,7 @@ export default function UploadReportForm() {
       formData.set("title", title);
       formData.set("ticker", selectedTicker.symbol);
       formData.set("companyName", selectedTicker.name);
+      formData.set("coAuthors", JSON.stringify(coAuthors));
       formData.set("file", file);
 
       const res = await fetch("/api/reports/upload", { method: "POST", body: formData });
@@ -84,6 +91,7 @@ export default function UploadReportForm() {
       setFile(null);
       setTickerQuery("");
       setSelectedTicker(null);
+      setCoAuthors([]);
       setOpen(false);
       router.refresh();
     } finally {
@@ -172,10 +180,37 @@ export default function UploadReportForm() {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Defaults to file name"
+            placeholder="i.e. DCF, Equity Report, SOTP, NAV"
             className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
           />
         </div>
+
+        {teamMembers.length > 0 && (
+          <div>
+            <label className="text-xs font-medium uppercase tracking-wide text-muted">
+              Co-Authors (optional)
+            </label>
+            <div className="mt-1 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto rounded-md border border-border bg-background p-2">
+              {teamMembers.map((m) => {
+                const active = coAuthors.includes(m.name);
+                return (
+                  <button
+                    key={m.name}
+                    type="button"
+                    onClick={() => toggleCoAuthor(m.name)}
+                    className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+                      active
+                        ? "border-brand bg-brand text-white"
+                        : "border-border text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {m.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="text-xs font-medium uppercase tracking-wide text-muted">

@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Avatar from "@/components/team/Avatar";
-import { slugifyName } from "@/lib/team";
+import AssigneeList from "@/components/team/AssigneeList";
 import type { SectorInfo } from "@/lib/sectors";
 
 type ReportEntry = {
@@ -15,6 +14,7 @@ type ReportEntry = {
   description?: string;
   ticker?: string;
   uploadedBy?: string;
+  coAuthors?: string[];
   url: string;
 };
 
@@ -26,18 +26,6 @@ function TickerLink({ ticker }: { ticker: string }) {
       onClick={(e) => e.stopPropagation()}
     >
       {ticker}
-    </Link>
-  );
-}
-
-function UploaderLink({ name }: { name: string }) {
-  return (
-    <Link
-      href={`/team/${slugifyName(name)}`}
-      className="flex shrink-0 items-center gap-1.5 text-xs text-muted hover:text-brand"
-    >
-      <Avatar name={name} size={18} />
-      <span className="truncate">{name}</span>
     </Link>
   );
 }
@@ -216,7 +204,9 @@ export default function ReportsList({
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                {report.uploadedBy && <UploaderLink name={report.uploadedBy} />}
+                {report.uploadedBy && (
+                  <AssigneeList names={[report.uploadedBy, ...(report.coAuthors ?? [])]} avatarSize={18} />
+                )}
                 <span className="text-xs text-muted">
                   {report.uploadedBy ? "Published " : ""}
                   {new Date(report.date).toLocaleDateString()}
@@ -253,7 +243,11 @@ export default function ReportsList({
                 </p>
               )}
               <div className="mt-3 flex items-center justify-between gap-2">
-                {report.uploadedBy ? <UploaderLink name={report.uploadedBy} /> : <span />}
+                {report.uploadedBy ? (
+                  <AssigneeList names={[report.uploadedBy, ...(report.coAuthors ?? [])]} avatarSize={18} />
+                ) : (
+                  <span />
+                )}
                 <span className="shrink-0 text-xs text-muted">
                   {report.uploadedBy ? "Published " : ""}
                   {new Date(report.date).toLocaleDateString()}

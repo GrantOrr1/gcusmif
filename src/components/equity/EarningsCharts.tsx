@@ -186,6 +186,123 @@ export function EpsDotPlot({ points }: { points: EarningsQuarter[] }) {
   );
 }
 
+export function EbitdaRevenueChart({ points }: { points: EarningsQuarter[] }) {
+  const [hover, setHover] = useState<number | null>(null);
+
+  const plotWidth = WIDTH - PADDING.left - PADDING.right;
+  const plotHeight = HEIGHT - PADDING.top - PADDING.bottom;
+
+  const values = points.flatMap((p) => [p.revenue, p.ebitda]).filter((v): v is number => v !== null);
+  const max = values.length > 0 ? Math.max(...values, 0) : 1;
+  const ticks = niceTicks(0, max);
+
+  function x(i: number) {
+    return PADDING.left + ((i + 0.5) / Math.max(points.length, 1)) * plotWidth;
+  }
+  function y(v: number) {
+    return PADDING.top + (1 - v / (max || 1)) * plotHeight;
+  }
+
+  if (points.length === 0) {
+    return <p className="py-16 text-center text-sm text-muted">No data available.</p>;
+  }
+
+  function linePath(key: "revenue" | "ebitda") {
+    const coords = points
+      .map((p, i) => (p[key] !== null ? `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p[key]!).toFixed(1)}` : null))
+      .filter((v): v is string => v !== null);
+    return coords.join(" ");
+  }
+
+  const hoverPoint = hover !== null ? points[hover] : null;
+  const hoverMargin =
+    hoverPoint && hoverPoint.revenue && hoverPoint.ebitda !== null
+      ? hoverPoint.ebitda / hoverPoint.revenue
+      : null;
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-4 text-xs text-muted">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--brand)]" />
+          Revenue
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--positive)]" />
+          EBITDA
+        </span>
+      </div>
+
+      <div className="relative">
+        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full">
+          {ticks.map((t) => (
+            <g key={t}>
+              <line
+                x1={PADDING.left}
+                x2={WIDTH - PADDING.right}
+                y1={y(t)}
+                y2={y(t)}
+                stroke="var(--border)"
+                strokeWidth={1}
+              />
+              <text x={6} y={y(t) + 5} fontSize={14} fill="var(--muted)">
+                {formatCompactCurrency(t)}
+              </text>
+            </g>
+          ))}
+
+          <path d={linePath("revenue")} fill="none" stroke="var(--brand)" strokeWidth={2.5} />
+          <path d={linePath("ebitda")} fill="none" stroke="var(--positive)" strokeWidth={2.5} />
+
+          {points.map((p, i) => (
+            <g
+              key={`${p.label}-${i}`}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover((h) => (h === i ? null : h))}
+              style={{ cursor: "pointer" }}
+            >
+              <rect
+                x={PADDING.left + (i / points.length) * plotWidth}
+                y={PADDING.top}
+                width={plotWidth / points.length}
+                height={plotHeight}
+                fill={hover === i ? "var(--background)" : "transparent"}
+              />
+              {p.revenue !== null && <circle cx={x(i)} cy={y(p.revenue)} r={4} fill="var(--brand)" />}
+              {p.ebitda !== null && <circle cx={x(i)} cy={y(p.ebitda)} r={4} fill="var(--positive)" />}
+              <text
+                x={x(i)}
+                y={HEIGHT - PADDING.bottom + 22}
+                fontSize={14}
+                fontWeight={500}
+                textAnchor="middle"
+                fill="var(--muted)"
+              >
+                {p.label}
+              </text>
+            </g>
+          ))}
+        </svg>
+
+        {hoverPoint && (
+          <div
+            className="pointer-events-none absolute top-0 rounded-md border border-border bg-surface px-3 py-2 text-xs shadow-lg"
+            style={{
+              left: `${(x(hover!) / WIDTH) * 100}%`,
+              transform: hover! > points.length / 2 ? "translateX(-100%)" : undefined,
+            }}
+          >
+            <p className="font-medium text-foreground">{hoverPoint.label}</p>
+            <p className="text-foreground">Revenue {formatCompactCurrency(hoverPoint.revenue)}</p>
+            <p className="text-positive">EBITDA {formatCompactCurrency(hoverPoint.ebitda)}</p>
+            {hoverMargin !== null && <p className="text-muted">Margin {formatPercent(hoverMargin, 1)}</p>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function RevenueEarningsChart({ points }: { points: EarningsQuarter[] }) {
   const [hover, setHover] = useState<number | null>(null);
 

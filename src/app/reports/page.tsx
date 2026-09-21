@@ -15,7 +15,7 @@ export const metadata = {
 
 const TYPE_LABELS: Record<string, string> = {
   equity_report: "Equity Report",
-  coverage_watchlist_report: "Coverage Watchlist Report",
+  coverage_watchlist_report: "Watchlist Report",
   financial_model: "Financial Model",
 };
 
@@ -46,6 +46,7 @@ export default async function ReportsPage() {
       description: TYPE_LABELS[u.reportType] ?? u.reportType,
       ticker: u.ticker ?? undefined,
       uploadedBy: u.uploadedBy,
+      coAuthors: u.coAuthors,
       url: `/api/reports/file/${u.id}`,
     }));
 
@@ -61,10 +62,17 @@ export default async function ReportsPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Reports</h1>
           <p className="mt-2 text-sm text-muted">
-            Equity Reports, Coverage Watchlist Reports, and Financial Models from our analysts.
+            Equity Reports, Watchlist Reports, and Financial Models from our analysts.
           </p>
         </div>
-        {canUpload && <UploadReportForm />}
+        {canUpload && (
+          <UploadReportForm
+            teamMembers={TEAM.filter((m) => m.name !== me?.name).map((m) => ({
+              name: m.name,
+              role: m.role,
+            }))}
+          />
+        )}
       </div>
 
       {myPendingUploads.length > 0 && (

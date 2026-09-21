@@ -16,6 +16,7 @@ export type ReportUpload = {
   mimeType: string;
   sector: string;
   uploadedBy: string;
+  coAuthors: string[];
   status: ReportStatus;
   reviewedBy: string | null;
   reviewedAt: string | null;
@@ -33,11 +34,23 @@ type Row = {
   mime_type: string;
   sector: string;
   uploaded_by: string;
+  co_authors: string | null;
   status: ReportStatus;
   reviewed_by: string | null;
   reviewed_at: string | null;
   created_at: string;
 };
+
+function parseCoAuthors(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.filter((v): v is string => typeof v === "string");
+  } catch {
+    return [];
+  }
+  return [];
+}
 
 function fromRow(row: Row): ReportUpload {
   return {
@@ -51,6 +64,7 @@ function fromRow(row: Row): ReportUpload {
     mimeType: row.mime_type,
     sector: row.sector,
     uploadedBy: row.uploaded_by,
+    coAuthors: parseCoAuthors(row.co_authors),
     status: row.status,
     reviewedBy: row.reviewed_by,
     reviewedAt: row.reviewed_at,
@@ -94,6 +108,14 @@ export function listApprovedReportsForTicker(ticker: string): ReportUpload[] {
   return rows.map(fromRow);
 }
 
+/** Approved reports where this person is the uploader OR a listed co-author. */
+export function listApprovedReportsByUploader(name: string): ReportUpload[] {
+  const rows = db
+    .prepare("SELECT * FROM report_uploads WHERE status = 'approved' ORDER BY reviewed_at DESC")
+    .all() as Row[];
+  return rows.map(fromRow).filter((r) => r.uploadedBy === name || r.coAuthors.includes(name));
+}
+
 export function getReportUpload(id: number): ReportUpload | undefined {
   const row = db.prepare("SELECT * FROM report_uploads WHERE id = ?").get(id) as Row | undefined;
   return row ? fromRow(row) : undefined;
@@ -109,6 +131,7 @@ export function insertReportUpload(data: {
   mimeType: string;
   sector: string;
   uploadedBy: string;
+  coAuthors?: string[];
   status: ReportStatus;
   reviewedBy?: string | null;
   reviewedAt?: string | null;
@@ -116,8 +139,8 @@ export function insertReportUpload(data: {
   const result = db
     .prepare(
       `INSERT INTO report_uploads
-        (title, report_type, ticker, company_name, file_name, file_path, mime_type, sector, uploaded_by, status, reviewed_by, reviewed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        (title, report_type, ticker, company_name, file_name, file_path, mime_type, sector, uploaded_by, co_authors, status, reviewed_by, reviewed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       data.title,
@@ -129,6 +152,7 @@ export function insertReportUpload(data: {
       data.mimeType,
       data.sector,
       data.uploadedBy,
+      data.coAuthors && data.coAuthors.length > 0 ? JSON.stringify(data.coAuthors) : null,
       data.status,
       data.reviewedBy ?? null,
       data.reviewedAt ?? null

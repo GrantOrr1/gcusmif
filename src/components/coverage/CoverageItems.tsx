@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Avatar from "@/components/team/Avatar";
-import { slugifyName } from "@/lib/team";
+import AssigneeList from "@/components/team/AssigneeList";
 import { formatPrice, formatPercent } from "@/lib/format";
 import type { SectorInfo } from "@/lib/sectors";
 import RatingModal from "@/components/ratings/RatingModal";
@@ -48,26 +47,6 @@ function RatingBadge({ item }: { item: CoverageHolding }) {
         <>&nbsp;</>
       )}
     </p>
-  );
-}
-
-function AssigneeList({ names }: { names: string[] }) {
-  if (names.length === 0) {
-    return <span className="text-xs text-muted">Unassigned</span>;
-  }
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      {names.map((name) => (
-        <Link
-          key={name}
-          href={`/team/${slugifyName(name)}`}
-          className="flex items-center gap-1.5 text-xs text-muted hover:text-brand"
-        >
-          <Avatar name={name} size={18} />
-          <span>{name}</span>
-        </Link>
-      ))}
-    </div>
   );
 }
 
