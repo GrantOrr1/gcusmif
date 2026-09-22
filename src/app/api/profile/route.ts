@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { teamBySlug, isSamePerson } from "@/lib/team";
 import { upsertProfileOverride } from "@/lib/profileOverrides";
+import { normalizeExternalUrl } from "@/lib/url";
 
 export async function PATCH(req: NextRequest) {
   const session = await auth();
@@ -26,7 +27,9 @@ export async function PATCH(req: NextRequest) {
 
   const bio = typeof body.bio === "string" ? body.bio.trim().slice(0, 2000) : undefined;
   const linkedinUrl =
-    typeof body.linkedinUrl === "string" ? body.linkedinUrl.trim().slice(0, 300) : undefined;
+    typeof body.linkedinUrl === "string"
+      ? normalizeExternalUrl(body.linkedinUrl.trim().slice(0, 300))
+      : undefined;
   const email = typeof body.email === "string" ? body.email.trim().slice(0, 200) : undefined;
 
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
 import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
 import { getSocialLinks, setSocialLink, type SocialPlatform } from "@/lib/socialLinks";
+import { normalizeExternalUrl } from "@/lib/url";
 
 const PLATFORMS: SocialPlatform[] = ["instagram", "linkedin"];
 
@@ -26,7 +27,7 @@ export async function PATCH(req: NextRequest) {
   for (const platform of PLATFORMS) {
     if (body && platform in body) {
       const raw = body[platform];
-      const url = typeof raw === "string" ? raw.trim().slice(0, 300) : "";
+      const url = typeof raw === "string" ? normalizeExternalUrl(raw.trim().slice(0, 300)) : "";
       setSocialLink(platform, url === "" ? null : url, me!.name);
     }
   }
