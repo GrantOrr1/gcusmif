@@ -19,17 +19,3 @@ export function withCoverage(event: CalendarEvent): CalendarEvent & { coveringNa
     coveringNames: event.ticker ? getCoveringPeopleForTicker(event.ticker) : [],
   };
 }
-
-/** Tickers eligible for an earnings-call event: anything watched or held. */
-export async function listEarningsEligibleTickers(): Promise<
-  { ticker: string; companyName: string | null }[]
-> {
-  const { getPortfolioData } = await import("./portfolio");
-  const portfolio = await getPortfolioData();
-  const map = new Map<string, string | null>();
-  for (const h of portfolio.holdings) map.set(h.ticker, h.companyName);
-  for (const w of listWatchlist()) if (!map.has(w.ticker)) map.set(w.ticker, w.companyName);
-  return Array.from(map.entries())
-    .map(([ticker, companyName]) => ({ ticker, companyName }))
-    .sort((a, b) => a.ticker.localeCompare(b.ticker));
-}

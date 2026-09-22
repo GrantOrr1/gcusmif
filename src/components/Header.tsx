@@ -17,6 +17,7 @@ const BASE_TABS = [
   { href: "/coverage", label: "Coverage" },
   { href: "/reports", label: "Reports" },
   { href: "/team", label: "Team" },
+  { href: "/donate", label: "Donate" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -131,6 +132,7 @@ export default function Header() {
     ...(status === "authenticated" ? [{ href: "/calendar", label: "Calendar" }] : []),
     ...(canSeeManagerTabs ? [{ href: "/attendance", label: "Attendance" }] : []),
     BASE_TABS[6],
+    BASE_TABS[7],
   ];
 
   return (
@@ -142,7 +144,7 @@ export default function Header() {
           </span>
           <span className="hidden sm:inline">SMIF</span>
           <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted">
-            Beta 1.0
+            Beta 2.0
           </span>
         </Link>
 

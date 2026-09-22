@@ -79,6 +79,16 @@ export function addCalendarEvent(data: {
   return getCalendarEvent(Number(result.lastInsertRowid))!;
 }
 
+export function getUpcomingEarningsCallForTicker(ticker: string): CalendarEvent | undefined {
+  const today = new Date().toISOString().slice(0, 10);
+  const row = db
+    .prepare(
+      "SELECT * FROM calendar_events WHERE ticker = ? AND date >= ? ORDER BY date ASC LIMIT 1"
+    )
+    .get(ticker, today) as Row | undefined;
+  return row ? fromRow(row) : undefined;
+}
+
 export function deleteCalendarEvent(id: number): void {
   db.prepare("DELETE FROM calendar_events WHERE id = ?").run(id);
 }

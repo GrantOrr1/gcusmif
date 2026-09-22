@@ -4,12 +4,13 @@ import { TEAM } from "@/data/team";
 import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
 import { listCalendarEvents, addCalendarEvent } from "@/lib/calendarStore";
 import { RECURRING_COLOR, EARNINGS_COLOR } from "@/lib/calendarColors";
-import { withCoverage, listEarningsEligibleTickers } from "@/lib/tickerCoverage";
+import { withCoverage } from "@/lib/tickerCoverage";
 import type { TeamMember } from "@/data/team";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const TICKER_RE = /^[A-Z0-9.-]{1,10}$/;
 
 function canManageCalendar(person: TeamMember | undefined): boolean {
   return hasPortfolioManagerAccess(person) || !!person?.role.includes("Sector Head");
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   const me = TEAM.find((m) => isSamePerson(session.user?.name, m));
-  if (!me || !canManageCalendar(me)) {
+  if (!me) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -44,6 +45,12 @@ export async function POST(req: NextRequest) {
   const endTime = typeof body?.endTime === "string" && body.endTime ? body.endTime : null;
   const ticker =
     typeof body?.ticker === "string" && body.ticker.trim() ? body.ticker.trim().toUpperCase() : null;
+
+  // Earnings-call events (ticker set) are open to every analyst; regular
+  // events are still restricted to Sector Heads and the Portfolio Manager.
+  if (!ticker && !canManageCalendar(me)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   if (!DATE_RE.test(date)) {
     return NextResponse.json({ error: "Invalid date" }, { status: 400 });
@@ -59,12 +66,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (ticker) {
-    const eligible = await listEarningsEligibleTickers();
-    if (!eligible.some((e) => e.ticker === ticker)) {
-      return NextResponse.json(
-        { error: "Ticker must be a watched or held equity" },
-        { status: 400 }
-      );
+    if (!TICKER_RE.test(ticker)) {
+      return NextResponse.json({ error: "Invalid ticker" }, { status: 400 });
     }
     color = EARNINGS_COLOR;
   } else {

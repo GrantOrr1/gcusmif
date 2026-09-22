@@ -17,10 +17,14 @@ import { EpsDotPlot, RevenueEarningsChart, EbitdaRevenueChart } from "@/componen
 import KpiCard from "@/components/portfolio/KpiCard";
 import { listApprovedReportsForTicker } from "@/lib/reportUploads";
 import { getCoverageForTicker } from "@/lib/coverageStore";
+import { getCoveringPeopleForTicker } from "@/lib/tickerCoverage";
+import { getWatchlistItemForTicker } from "@/lib/watchlistStore";
+import { getUpcomingEarningsCallForTicker } from "@/lib/calendarStore";
 import { TEAM } from "@/data/team";
 import { slugifyName } from "@/lib/team";
 import Avatar from "@/components/team/Avatar";
 import AssigneeList from "@/components/team/AssigneeList";
+import ReportsHeightSync from "@/components/equity/ReportsHeightSync";
 
 const TYPE_LABELS: Record<string, string> = {
   equity_report: "Equity Report",
@@ -57,18 +61,27 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
     holding?.totalValue != null && holding?.totalValuePaid != null
       ? holding.totalValue - holding.totalValuePaid
       : null;
-  const reports = listApprovedReportsForTicker(ticker);
+  const reports = listApprovedReportsForTicker(ticker).sort((a, b) =>
+    (b.reviewedAt ?? b.createdAt).localeCompare(a.reviewedAt ?? a.createdAt)
+  );
   const sectorInfo = holding?.sector ? sectorByCode(holding.sector) : undefined;
   const coverage = getCoverageForTicker(ticker);
-  const coverageTeam = (coverage?.assignedTo ?? [])
+  const watchlistItem = getWatchlistItemForTicker(ticker);
+  const ratingSource = holding
+    ? { rating: coverage?.rating ?? null, targetPrice: coverage?.targetPrice ?? null, triggerPrice: coverage?.triggerPrice ?? null }
+    : { rating: watchlistItem?.rating ?? null, targetPrice: watchlistItem?.targetPrice ?? null, triggerPrice: watchlistItem?.triggerPrice ?? null };
+  const coverageTeam = getCoveringPeopleForTicker(ticker)
     .map((name) => TEAM.find((m) => m.name === name))
     .filter((m): m is (typeof TEAM)[number] => !!m);
+  const upcomingEarningsCall = getUpcomingEarningsCallForTicker(ticker);
+  const coveringTitle = (coverage?.assignedTo.length ?? 0) > 0 ? "Coverage Team" : "Watching";
   const edgarFilingsUrl = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(ticker)}&type=&dateb=&owner=include&count=40`;
 
   const up = (quote.change ?? 0) >= 0;
 
   return (
     <div id="top" className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+      <ReportsHeightSync />
       <Link
         href={sectorInfo ? `/portfolio/${sectorInfo.slug}` : "/portfolio"}
         className="text-sm text-muted hover:text-foreground"
@@ -91,24 +104,41 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
             >
               Open Filings
             </a>
-            {holding && (
+            {(holding || watchlistItem) && (
               <a
                 href="#smif-rating"
                 className="rounded-md border border-brand bg-brand px-2 py-0.5 text-xs font-medium text-white hover:bg-brand-hover"
               >
-                Jump to Position
+                {holding ? "Jump to Position" : "Jump to Rating"}
               </a>
             )}
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-3xl font-bold text-foreground">
-            {formatPrice(quote.regularMarketPrice)}
-          </p>
-          <p className={`text-sm font-medium ${up ? "text-positive" : "text-negative"}`}>
-            {quote.change !== null ? formatPrice(quote.change) : "—"} (
-            {formatPercent(quote.changePercent)})
-          </p>
+        <div className="flex items-start gap-4">
+          {upcomingEarningsCall && (
+            <Link
+              href="/calendar"
+              className="rounded-md border border-negative/40 px-3 py-1.5 text-right hover:bg-negative/10"
+            >
+              <p className="text-xs font-semibold text-negative">Upcoming Earnings Call</p>
+              <p className="text-xs text-muted">
+                {new Date(`${upcomingEarningsCall.date}T00:00:00`).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+            </Link>
+          )}
+          <div className="text-right">
+            <p className="text-3xl font-bold text-foreground">
+              {formatPrice(quote.regularMarketPrice)}
+            </p>
+            <p className={`text-sm font-medium ${up ? "text-positive" : "text-negative"}`}>
+              {quote.change !== null ? formatPrice(quote.change) : "—"} (
+              {formatPercent(quote.changePercent)})
+            </p>
+          </div>
         </div>
       </div>
 
@@ -306,25 +336,25 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
             </div>
 
             <div className="mt-6 flex flex-1 flex-col gap-6">
-              {holding && (
+              {(holding || watchlistItem) && (
                 <div id="smif-rating" className="shrink-0 scroll-mt-20">
                   <h3 className="mb-2 text-sm font-semibold text-foreground">SMIF Rating</h3>
                   <div className="flex flex-col gap-3">
                     <KpiCard
                       compact
                       label="Rating"
-                      value={coverage?.rating ?? "—"}
-                      tone={ratingTone(coverage?.rating ?? null)}
+                      value={ratingSource.rating ?? "—"}
+                      tone={ratingTone(ratingSource.rating)}
                     />
                     <KpiCard
                       compact
                       label="12M Target Price"
-                      value={formatPrice(coverage?.targetPrice ?? null)}
+                      value={formatPrice(ratingSource.targetPrice)}
                     />
                     <KpiCard
                       compact
                       label="Trigger Sell Price"
-                      value={formatPrice(coverage?.triggerPrice ?? null)}
+                      value={formatPrice(ratingSource.triggerPrice)}
                     />
                   </div>
                 </div>
@@ -390,7 +420,7 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
                 Open Filings
               </a>
             </div>
-            <div className="rounded-lg border border-border bg-surface p-4">
+            <div id="financial-highlights-box" className="rounded-lg border border-border bg-surface p-4">
               <dl>
                 <SummaryRow
                   label="Fiscal Year Ends"
@@ -519,7 +549,15 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
 
       {coverageTeam.length > 0 && (
         <div className="mt-10">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Coverage Team</h2>
+          <div className="mb-4 flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-foreground">{coveringTitle}</h2>
+            <a
+              href="#top"
+              className="rounded-md border border-brand bg-brand px-2 py-0.5 text-xs font-medium text-white hover:bg-brand-hover"
+            >
+              Jump to Top
+            </a>
+          </div>
           <div className="flex flex-wrap gap-4">
             {coverageTeam.map((m) => (
               <Link

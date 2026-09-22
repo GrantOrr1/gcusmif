@@ -3,6 +3,11 @@ import Credentials from "next-auth/providers/credentials";
 import { findAnalystByUsername, verifyPassword } from "@/lib/analysts";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Railway (and most non-Vercel hosts) sit behind a reverse proxy, so Auth.js
+  // can't verify the Host header against a known deployment URL on its own —
+  // without this it rejects auth actions (including sign-out) with an error
+  // instead of completing the redirect.
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {

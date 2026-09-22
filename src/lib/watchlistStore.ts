@@ -66,6 +66,13 @@ export function getWatchlistItem(id: number): WatchlistItem | undefined {
   return row ? fromRow(row) : undefined;
 }
 
+export function getWatchlistItemForTicker(ticker: string): WatchlistItem | undefined {
+  const row = db
+    .prepare("SELECT * FROM watchlist_items WHERE ticker = ? ORDER BY created_at DESC LIMIT 1")
+    .get(ticker) as Row | undefined;
+  return row ? fromRow(row) : undefined;
+}
+
 export function updateWatchlistRating(
   id: number,
   data: { rating: Rating | null; targetPrice: number | null; triggerPrice: number | null }

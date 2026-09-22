@@ -194,13 +194,17 @@ export function EbitdaRevenueChart({ points }: { points: EarningsQuarter[] }) {
 
   const values = points.flatMap((p) => [p.revenue, p.ebitda]).filter((v): v is number => v !== null);
   const max = values.length > 0 ? Math.max(...values, 0) : 1;
-  const ticks = niceTicks(0, max);
+  const rawMin = values.length > 0 ? Math.min(...values, 0) : 0;
+  // Only pad below zero when EBITDA actually goes negative, so the line and its
+  // dot have room to sit above the date labels instead of overlapping them.
+  const min = rawMin < 0 ? rawMin - (max - rawMin) * 0.18 : 0;
+  const ticks = niceTicks(min, max);
 
   function x(i: number) {
     return PADDING.left + ((i + 0.5) / Math.max(points.length, 1)) * plotWidth;
   }
   function y(v: number) {
-    return PADDING.top + (1 - v / (max || 1)) * plotHeight;
+    return PADDING.top + (1 - (v - min) / (max - min || 1)) * plotHeight;
   }
 
   if (points.length === 0) {

@@ -41,16 +41,16 @@ export default function CalendarView({
   initialEvents,
   initialRecurring,
   initialExceptions,
-  equityOptions,
   canAdd,
+  canAddEarnings,
   myName,
   isPortfolioManager,
 }: {
   initialEvents: EnrichedEvent[];
   initialRecurring: RecurringEvent[];
   initialExceptions: RecurringException[];
-  equityOptions: { ticker: string; companyName: string | null }[];
   canAdd: boolean;
+  canAddEarnings: boolean;
   myName: string | null;
   isPortfolioManager: boolean;
 }) {
@@ -64,6 +64,7 @@ export default function CalendarView({
   const [exceptions, setExceptions] = useState(initialExceptions);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [addDate, setAddDate] = useState<string | null>(null);
+  const [addEarningsDate, setAddEarningsDate] = useState<string | null>(null);
   const [hoverInfo, setHoverInfo] = useState<{
     title: string;
     description: string | null;
@@ -229,6 +230,16 @@ export default function CalendarView({
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">{monthLabel}</h2>
           <div className="flex gap-2">
+            {canAddEarnings && (
+              <button
+                onClick={() =>
+                  setAddEarningsDate(toDateKey(today.getFullYear(), today.getMonth(), today.getDate()))
+                }
+                className="rounded-md border border-negative/40 px-3 py-1.5 text-sm font-semibold text-negative hover:bg-negative/10"
+              >
+                + Add Earnings Call
+              </button>
+            )}
             {canAdd && (
               <button
                 onClick={() => setAddDate(toDateKey(today.getFullYear(), today.getMonth(), today.getDate()))}
@@ -488,7 +499,7 @@ export default function CalendarView({
 
             {deleteError && <p className="mt-2 text-xs text-negative">{deleteError}</p>}
 
-            {canAdd && (isPortfolioManager || selectedEvent.createdBy === myName) && (
+            {(isPortfolioManager || selectedEvent.createdBy === myName) && (
               <button
                 onClick={() => handleDelete(selectedEvent.id)}
                 disabled={deleting}
@@ -519,11 +530,21 @@ export default function CalendarView({
       {addDate && (
         <AddEventModal
           date={addDate}
-          equityOptions={equityOptions}
           onClose={() => setAddDate(null)}
           onCreated={(event) => {
             setEvents((prev) => [...prev, event]);
             setAddDate(null);
+          }}
+        />
+      )}
+
+      {addEarningsDate && (
+        <AddEarningsCallModal
+          date={addEarningsDate}
+          onClose={() => setAddEarningsDate(null)}
+          onCreated={(event) => {
+            setEvents((prev) => [...prev, event]);
+            setAddEarningsDate(null);
           }}
         />
       )}
@@ -568,12 +589,10 @@ export default function CalendarView({
 
 function AddEventModal({
   date: initialDate,
-  equityOptions,
   onClose,
   onCreated,
 }: {
   date: string;
-  equityOptions: { ticker: string; companyName: string | null }[];
   onClose: () => void;
   onCreated: (event: EnrichedEvent) => void;
 }) {
@@ -583,34 +602,12 @@ function AddEventModal({
   const [color, setColor] = useState(EVENT_COLOR_OPTIONS[0].value);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [isEarnings, setIsEarnings] = useState(false);
-  const [ticker, setTicker] = useState(equityOptions[0]?.ticker ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function handleEarningsToggle(checked: boolean) {
-    setIsEarnings(checked);
-    if (checked) {
-      const t = ticker || equityOptions[0]?.ticker || "";
-      setTicker(t);
-      if (!title.trim() && t) setTitle(`${t} Earnings Call`);
-    }
-  }
-
-  function handleTickerChange(next: string) {
-    setTicker(next);
-    if (isEarnings && (!title.trim() || /Earnings Call$/.test(title))) {
-      setTitle(`${next} Earnings Call`);
-    }
-  }
 
   async function handleSave() {
     if (!title.trim()) {
       setError("Title is required.");
-      return;
-    }
-    if (isEarnings && !ticker) {
-      setError("Pick an equity for this earnings call.");
       return;
     }
     setSaving(true);
@@ -623,10 +620,10 @@ function AddEventModal({
           date,
           title,
           description,
-          color: isEarnings ? EARNINGS_COLOR : color,
+          color,
           startTime: startTime || null,
           endTime: endTime || null,
-          ticker: isEarnings ? ticker : null,
+          ticker: null,
         }),
       });
       if (!res.ok) {
@@ -666,38 +663,13 @@ function AddEventModal({
           })}
         </p>
 
-        <label className="mt-3 flex items-center gap-2 text-xs font-medium text-muted">
-          <input
-            type="checkbox"
-            checked={isEarnings}
-            onChange={(e) => handleEarningsToggle(e.target.checked)}
-            disabled={equityOptions.length === 0}
-          />
-          Earnings call for a watched or held equity
-        </label>
-
-        {isEarnings && (
-          <select
-            value={ticker}
-            onChange={(e) => handleTickerChange(e.target.value)}
-            className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
-          >
-            {equityOptions.map((e) => (
-              <option key={e.ticker} value={e.ticker}>
-                {e.ticker}
-                {e.companyName ? ` — ${e.companyName}` : ""}
-              </option>
-            ))}
-          </select>
-        )}
-
         <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
           Title
         </label>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. Earnings call — HCA"
+          placeholder="e.g. SMIF Guest Speaker"
           className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
         />
 
@@ -737,32 +709,233 @@ function AddEventModal({
           className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
         />
 
-        {isEarnings ? (
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted">
-            <span className="h-4 w-4 rounded-full" style={{ backgroundColor: EARNINGS_COLOR }} />
-            Color is fixed to red for earnings calls.
-          </div>
-        ) : (
-          <>
-            <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
-              Color
-            </label>
-            <div className="mt-1 flex flex-wrap gap-2">
-              {EVENT_COLOR_OPTIONS.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  aria-label={c.label}
-                  onClick={() => setColor(c.value)}
-                  className={`h-6 w-6 rounded-full ${
-                    color === c.value ? "ring-2 ring-brand ring-offset-2 ring-offset-surface" : ""
-                  }`}
-                  style={{ backgroundColor: c.value }}
-                />
+        <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
+          Color
+        </label>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {EVENT_COLOR_OPTIONS.map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              aria-label={c.label}
+              onClick={() => setColor(c.value)}
+              className={`h-6 w-6 rounded-full ${
+                color === c.value ? "ring-2 ring-brand ring-offset-2 ring-offset-surface" : ""
+              }`}
+              style={{ backgroundColor: c.value }}
+            />
+          ))}
+        </div>
+
+        {error && <p className="mt-2 text-xs text-negative">{error}</p>}
+
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type EquitySearchResult = { symbol: string; name: string };
+
+function AddEarningsCallModal({
+  date: initialDate,
+  onClose,
+  onCreated,
+}: {
+  date: string;
+  onClose: () => void;
+  onCreated: (event: EnrichedEvent) => void;
+}) {
+  const [date, setDate] = useState(initialDate);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<EquitySearchResult[]>([]);
+  const [selected, setSelected] = useState<EquitySearchResult | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSearch(value: string) {
+    setQuery(value);
+    setSelected(null);
+    if (!value.trim()) {
+      setResults([]);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/analyst/search?q=${encodeURIComponent(value)}`);
+      const json = await res.json();
+      setResults(json.results ?? []);
+    } catch {
+      setResults([]);
+    }
+  }
+
+  function pickResult(r: EquitySearchResult) {
+    setSelected(r);
+    setQuery(`${r.symbol} — ${r.name}`);
+    setResults([]);
+    if (!title.trim() || /Earnings Call$/.test(title)) {
+      setTitle(`${r.symbol} Earnings Call`);
+    }
+  }
+
+  async function handleSave() {
+    if (!selected) {
+      setError("Search for and pick an equity.");
+      return;
+    }
+    if (!title.trim()) {
+      setError("Title is required.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/calendar/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date,
+          title,
+          description,
+          startTime: startTime || null,
+          endTime: endTime || null,
+          ticker: selected.symbol,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setError(body?.error ?? "Could not save. Try again.");
+        return;
+      }
+      const event: EnrichedEvent = await res.json();
+      onCreated(event);
+    } catch {
+      setError("Could not save. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <div className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-lg border border-border bg-surface p-5">
+        <h2 className="text-lg font-bold text-foreground">Add Earnings Call</h2>
+
+        <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
+          Date
+        </label>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+        />
+        <p className="mt-1 text-xs text-muted">
+          {new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </p>
+
+        <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
+          Equity
+        </label>
+        <div className="relative">
+          <input
+            value={query}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Search ticker or company"
+            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+          />
+          {results.length > 0 && !selected && (
+            <ul className="absolute z-10 mt-1 w-full rounded-md border border-border bg-surface shadow-lg">
+              {results.map((r) => (
+                <li key={r.symbol}>
+                  <button
+                    type="button"
+                    onClick={() => pickResult(r)}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-background"
+                  >
+                    <span className="font-medium text-foreground">{r.symbol}</span>
+                    <span className="truncate pl-2 text-muted">{r.name}</span>
+                  </button>
+                </li>
               ))}
-            </div>
-          </>
-        )}
+            </ul>
+          )}
+        </div>
+
+        <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
+          Title
+        </label>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. HCA Earnings Call"
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+        />
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium uppercase tracking-wide text-muted">
+              Start Time
+            </label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium uppercase tracking-wide text-muted">
+              End Time
+            </label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+            />
+          </div>
+        </div>
+
+        <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
+          Description
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          placeholder="Optional details…"
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+        />
+
+        <div className="mt-3 flex items-center gap-2 text-xs text-muted">
+          <span className="h-4 w-4 rounded-full" style={{ backgroundColor: EARNINGS_COLOR }} />
+          Color is fixed to red for earnings calls.
+        </div>
 
         {error && <p className="mt-2 text-xs text-negative">{error}</p>}
 
