@@ -11,6 +11,13 @@ fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 const db = new DatabaseSync(DB_PATH);
 
+// Allow workers to wait for a lock to clear instead of failing immediately with
+// SQLITE_BUSY. Next.js's build-time page-data collection imports this module from
+// many parallel workers, each of which briefly opens its own connection to the
+// same file and runs the migration block below, so contention is expected here.
+db.exec("PRAGMA busy_timeout = 5000;");
+db.exec("PRAGMA journal_mode = WAL;");
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS profile_overrides (
     slug TEXT PRIMARY KEY,
