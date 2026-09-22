@@ -142,54 +142,48 @@ db.exec(`
   );
 `);
 
+// Adds a column only if it's missing, and swallows "duplicate column name"
+// errors caused by another concurrent worker (see PRAGMA comment above)
+// winning the race and adding the column first.
+function addColumnIfMissing(columns: string[], column: string, ddl: string) {
+  if (!columns.includes(column)) {
+    try {
+      db.exec(ddl);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!message.includes("duplicate column name")) {
+        throw err;
+      }
+    }
+  }
+}
+
 const reportUploadColumns = (db.prepare("PRAGMA table_info(report_uploads)").all() as { name: string }[]).map(
   (c) => c.name
 );
-if (!reportUploadColumns.includes("ticker")) {
-  db.exec("ALTER TABLE report_uploads ADD COLUMN ticker TEXT");
-}
-if (!reportUploadColumns.includes("company_name")) {
-  db.exec("ALTER TABLE report_uploads ADD COLUMN company_name TEXT");
-}
-if (!reportUploadColumns.includes("co_authors")) {
-  db.exec("ALTER TABLE report_uploads ADD COLUMN co_authors TEXT");
-}
+addColumnIfMissing(reportUploadColumns, "ticker", "ALTER TABLE report_uploads ADD COLUMN ticker TEXT");
+addColumnIfMissing(reportUploadColumns, "company_name", "ALTER TABLE report_uploads ADD COLUMN company_name TEXT");
+addColumnIfMissing(reportUploadColumns, "co_authors", "ALTER TABLE report_uploads ADD COLUMN co_authors TEXT");
 
 const watchlistColumns = (db.prepare("PRAGMA table_info(watchlist_items)").all() as { name: string }[]).map(
   (c) => c.name
 );
-if (!watchlistColumns.includes("target_price")) {
-  db.exec("ALTER TABLE watchlist_items ADD COLUMN target_price REAL");
-}
-if (!watchlistColumns.includes("trigger_price")) {
-  db.exec("ALTER TABLE watchlist_items ADD COLUMN trigger_price REAL");
-}
-if (!watchlistColumns.includes("rating")) {
-  db.exec("ALTER TABLE watchlist_items ADD COLUMN rating TEXT");
-}
+addColumnIfMissing(watchlistColumns, "target_price", "ALTER TABLE watchlist_items ADD COLUMN target_price REAL");
+addColumnIfMissing(watchlistColumns, "trigger_price", "ALTER TABLE watchlist_items ADD COLUMN trigger_price REAL");
+addColumnIfMissing(watchlistColumns, "rating", "ALTER TABLE watchlist_items ADD COLUMN rating TEXT");
 
 const profileOverrideColumns = (
   db.prepare("PRAGMA table_info(profile_overrides)").all() as { name: string }[]
 ).map((c) => c.name);
-if (!profileOverrideColumns.includes("photo_file")) {
-  db.exec("ALTER TABLE profile_overrides ADD COLUMN photo_file TEXT");
-}
-if (!profileOverrideColumns.includes("email")) {
-  db.exec("ALTER TABLE profile_overrides ADD COLUMN email TEXT");
-}
+addColumnIfMissing(profileOverrideColumns, "photo_file", "ALTER TABLE profile_overrides ADD COLUMN photo_file TEXT");
+addColumnIfMissing(profileOverrideColumns, "email", "ALTER TABLE profile_overrides ADD COLUMN email TEXT");
 
 const calendarEventColumns = (
   db.prepare("PRAGMA table_info(calendar_events)").all() as { name: string }[]
 ).map((c) => c.name);
-if (!calendarEventColumns.includes("start_time")) {
-  db.exec("ALTER TABLE calendar_events ADD COLUMN start_time TEXT");
-}
-if (!calendarEventColumns.includes("end_time")) {
-  db.exec("ALTER TABLE calendar_events ADD COLUMN end_time TEXT");
-}
-if (!calendarEventColumns.includes("ticker")) {
-  db.exec("ALTER TABLE calendar_events ADD COLUMN ticker TEXT");
-}
+addColumnIfMissing(calendarEventColumns, "start_time", "ALTER TABLE calendar_events ADD COLUMN start_time TEXT");
+addColumnIfMissing(calendarEventColumns, "end_time", "ALTER TABLE calendar_events ADD COLUMN end_time TEXT");
+addColumnIfMissing(calendarEventColumns, "ticker", "ALTER TABLE calendar_events ADD COLUMN ticker TEXT");
 
 const recurringEventCount = (
   db.prepare("SELECT COUNT(*) as count FROM recurring_events").get() as { count: number }
