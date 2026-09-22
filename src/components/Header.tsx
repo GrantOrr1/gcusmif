@@ -141,6 +141,9 @@ export default function Header() {
             S
           </span>
           <span className="hidden sm:inline">SMIF</span>
+          <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted">
+            Beta 1.0
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
