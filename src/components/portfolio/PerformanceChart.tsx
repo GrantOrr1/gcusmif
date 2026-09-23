@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PerformanceSeries, RangeKey } from "@/lib/performance";
-import { formatPercent, formatPointDateTime, formatShortDate } from "@/lib/format";
+import { formatCurrency, formatPercent, formatPointDateTime, formatShortDate } from "@/lib/format";
 import { colorForSector } from "@/lib/sectorColors";
 import { sortBySectorOrder } from "@/lib/sectorOrder";
 import { evenIndices } from "@/lib/chartTicks";
@@ -307,13 +307,19 @@ export default function PerformanceChart({
         {hoverPoint && (
           <div className="pointer-events-none absolute left-2 top-0 rounded-md border border-border bg-surface px-2 py-1 text-xs shadow">
             <p className="font-medium text-foreground">{formatPointDateTime(hoverPoint.date)}</p>
-            <p className="text-brand">Portfolio {formatPercent(hoverPoint.portfolio)}</p>
+            <p className="text-brand">
+              Portfolio {formatPercent(hoverPoint.portfolio)} ({formatCurrency(hoverPoint.portfolioValue)})
+            </p>
             {hoverPoint.benchmark !== undefined && (
-              <p className="text-foreground">S&amp;P 500 {formatPercent(hoverPoint.benchmark)}</p>
+              <p className="text-foreground">
+                S&amp;P 500 {formatPercent(hoverPoint.benchmark)}
+                {hoverPoint.benchmarkValue !== undefined &&
+                  ` (${formatCurrency(hoverPoint.benchmarkValue)})`}
+              </p>
             )}
             {Array.from(activeSectors).map((s) => (
               <p key={s} style={{ color: colorForSector(s) }}>
-                {s} {formatPercent(hoverPoint.sectors[s] ?? 0)}
+                {s} {formatPercent(hoverPoint.sectors[s] ?? 0)} ({formatCurrency(hoverPoint.sectorValues[s] ?? 0)})
               </p>
             ))}
           </div>

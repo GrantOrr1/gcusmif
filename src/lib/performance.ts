@@ -17,6 +17,7 @@ export type PerformancePoint = {
   benchmark?: number;
   benchmarkValue?: number;
   sectorBenchmarks: Record<string, number>;
+  sectorBenchmarkValues: Record<string, number>;
 };
 
 export type PerformanceSeries = {
@@ -162,12 +163,16 @@ async function computeSeries(range: RangeKey): Promise<PerformanceSeries> {
       const benchmarkValue = benchmark !== undefined ? baseTotal * (1 + benchmark) : undefined;
 
       const sectorBenchmarks: Record<string, number> = {};
+      const sectorBenchmarkValues: Record<string, number> = {};
       for (const s of sectors) {
         const ticker = benchmarkForSector(s).ticker;
         const base = baseByBenchmark.get(ticker);
         const close = benchmarkByTicker.get(ticker)?.get(date);
+        const sectorBase = baseBySector.get(s);
         if (base !== undefined && close !== undefined) {
-          sectorBenchmarks[s] = close / base - 1;
+          const sectorBenchmarkReturn = close / base - 1;
+          sectorBenchmarks[s] = sectorBenchmarkReturn;
+          if (sectorBase) sectorBenchmarkValues[s] = sectorBase * (1 + sectorBenchmarkReturn);
         }
       }
 
@@ -182,6 +187,7 @@ async function computeSeries(range: RangeKey): Promise<PerformanceSeries> {
         benchmark,
         benchmarkValue,
         sectorBenchmarks,
+        sectorBenchmarkValues,
       });
     }
   }

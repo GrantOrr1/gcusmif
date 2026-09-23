@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import Avatar from "@/components/team/Avatar";
 import AttendanceBarChart from "@/components/attendance/AttendanceBarChart";
+import MeetingDatePicker from "@/components/attendance/MeetingDatePicker";
 
 type RosterMember = { name: string; role: string };
 type SectorRoster = { sector: string; roster: RosterMember[] };
@@ -51,6 +52,7 @@ export default function AttendanceBoard({
   defaultSector: string;
 }) {
   const dates = useMemo(() => seasonMeetingDates(), []);
+  const validDates = useMemo(() => new Set(dates.map((d) => d.value)), [dates]);
   const [sector, setSector] = useState(defaultSector);
   const [date, setDate] = useState(() => defaultMeetingDate(dates));
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -154,17 +156,7 @@ export default function AttendanceBoard({
             ))}
           </select>
         )}
-        <select
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
-        >
-          {dates.map((d) => (
-            <option key={d.value} value={d.value}>
-              {d.label}
-            </option>
-          ))}
-        </select>
+        <MeetingDatePicker value={date} onChange={setDate} validDates={validDates} />
       </div>
 
       {error && <p className="mt-3 text-sm text-negative">{error}</p>}

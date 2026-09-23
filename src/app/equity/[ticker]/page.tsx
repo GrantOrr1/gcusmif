@@ -143,7 +143,13 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
       </div>
 
       <div className="mt-8">
-        <EquityReturnChart ticker={ticker} initialRange="ytd" initialData={ytdSeries} />
+        <EquityReturnChart
+          ticker={ticker}
+          label="Price History"
+          mode="price"
+          initialRange="ytd"
+          initialData={ytdSeries}
+        />
       </div>
 
       {notices.length > 0 && (
