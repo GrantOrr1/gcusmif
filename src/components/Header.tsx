@@ -12,7 +12,6 @@ import Avatar from "@/components/team/Avatar";
 const BASE_TABS = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/markets", label: "Markets" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/coverage", label: "Coverage" },
   { href: "/reports", label: "Reports" },
@@ -32,6 +31,7 @@ export default function Header() {
   const [portfolioMenuOpen, setPortfolioMenuOpen] = useState(false);
   const [aboutMenuOpen, setAboutMenuOpen] = useState(false);
   const [coverageMenuOpen, setCoverageMenuOpen] = useState(false);
+  const [otherMenuOpen, setOtherMenuOpen] = useState(false);
   const [pendingReports, setPendingReports] = useState(0);
   const [pendingRefreshKey, setPendingRefreshKey] = useState(0);
   const [pendingRatings, setPendingRatings] = useState({ watchlist: 0, coverage: 0 });
@@ -96,6 +96,7 @@ export default function Header() {
 
   const me = status === "authenticated" ? TEAM.find((m) => isSamePerson(session?.user?.name, m)) : undefined;
   const canSeeManagerTabs = !!me && (hasPortfolioManagerAccess(me) || me.role.includes("Sector Head"));
+  const canSeeYahooRatings = !!me && me.role !== "Analyst";
 
   useEffect(() => {
     const bump = () => setRatingsRefreshKey((k) => k + 1);
@@ -127,12 +128,23 @@ export default function Header() {
     return null;
   }
 
+  // Analyst Tools is only shown to logged-in analysts.
+  const otherItems =
+    status === "authenticated"
+      ? [
+          { href: "/markets", label: "Markets" },
+          ...(canSeeYahooRatings ? [{ href: "/yahoo-ratings", label: "Yahoo Ratings" }] : []),
+          { href: "/news-aggregator", label: "News Aggregator" },
+          { href: "/calendar", label: "Calendar" },
+          ...(canSeeManagerTabs ? [{ href: "/attendance", label: "Attendance" }] : []),
+        ]
+      : [];
+
   const TABS = [
-    ...BASE_TABS.slice(0, 6),
-    ...(status === "authenticated" ? [{ href: "/calendar", label: "Calendar" }] : []),
-    ...(canSeeManagerTabs ? [{ href: "/attendance", label: "Attendance" }] : []),
+    ...BASE_TABS.slice(0, 5),
+    BASE_TABS[5],
+    ...(otherItems.length > 0 ? [{ href: "/other", label: "Analyst Tools" }] : []),
     BASE_TABS[6],
-    BASE_TABS[7],
   ];
 
   return (
@@ -144,7 +156,7 @@ export default function Header() {
           </span>
           <span className="hidden sm:inline">SMIF</span>
           <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted">
-            Beta 2.0
+            Beta 2.1
           </span>
         </Link>
 
@@ -254,6 +266,34 @@ export default function Header() {
                           <span className="absolute right-2 top-2.5 h-2 w-2 rounded-full bg-negative" />
                         )}
                       </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            if (tab.href === "/other") {
+              const otherActive = otherItems.some((item) => isActive(pathname, item.href));
+              return (
+                <div key={tab.href} className="group relative">
+                  <span
+                    className={`cursor-default rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      otherActive ? "text-brand" : "text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {tab.label}
+                  </span>
+                  <div className="invisible absolute left-0 top-full w-56 pt-1 opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100">
+                    <div className="rounded-md border border-border bg-surface p-1.5 shadow-lg">
+                      {otherItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="block rounded-md px-3 py-2 text-sm text-muted hover:bg-background hover:text-foreground"
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -429,6 +469,37 @@ export default function Header() {
                         Watchlist
                         {showWatchlistBadge && <span className="h-2 w-2 rounded-full bg-negative" />}
                       </Link>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            if (tab.href === "/other") {
+              const otherActive = otherItems.some((item) => isActive(pathname, item.href));
+              return (
+                <div key={tab.href}>
+                  <button
+                    onClick={() => setOtherMenuOpen((v) => !v)}
+                    className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium ${
+                      otherActive ? "text-brand" : "text-muted"
+                    }`}
+                  >
+                    {tab.label}
+                    <span>{otherMenuOpen ? "−" : "+"}</span>
+                  </button>
+                  {otherMenuOpen && (
+                    <div className="ml-3 flex flex-col gap-1 border-l border-border pl-3">
+                      {otherItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setMenuOpen(false)}
+                          className="rounded-md px-3 py-2 text-sm text-muted"
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
                     </div>
                   )}
                 </div>

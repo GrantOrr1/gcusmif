@@ -596,3 +596,188 @@ export async function getQuote(symbol: string): Promise<Quote | null> {
     history,
   };
 }
+
+// Our fund's sector codes don't map one-to-one onto Yahoo's own sector
+// taxonomy, so each is expressed as one or more Yahoo sector values to
+// query for. "AGN" (Industry Agnostic) has no Yahoo sector equivalent and
+// is intentionally left out.
+const YAHOO_SECTOR_FILTERS: Record<string, string[]> = {
+  TMT: ["Technology", "Communication Services"],
+  FIG: ["Financial Services"],
+  HC: ["Healthcare"],
+  CONS: ["Consumer Cyclical", "Consumer Defensive"],
+  IND: ["Industrials"],
+  ENER: ["Energy"],
+};
+
+export type ScreenedEquity = {
+  symbol: string;
+  name: string;
+  price: number | null;
+  changePercent: number | null;
+  averageAnalystRating: string | null;
+};
+
+/** Top N equities in a sector, ranked by Yahoo's own "Avg. Analyst Rating" screener field (1.0 = Strong Buy). */
+export async function getTopRatedEquitiesForSector(
+  sectorCode: string,
+  limit = 12
+): Promise<ScreenedEquity[]> {
+  const sectors = YAHOO_SECTOR_FILTERS[sectorCode];
+  if (!sectors) return [];
+
+  const sectorQuery =
+    sectors.length > 1
+      ? { operator: "or", operands: sectors.map((s) => ({ operator: "eq", operands: ["sector", s] })) }
+      : { operator: "eq", operands: ["sector", sectors[0]] };
+
+  async function fetchOnce(auth: YahooAuth | null) {
+    const url = new URL("https://query2.finance.yahoo.com/v1/finance/screener");
+    if (auth) url.searchParams.set("crumb", auth.crumb);
+
+    const body = {
+      size: limit,
+      offset: 0,
+      sortField: "average_analyst_rating",
+      sortType: "ASC",
+      quoteType: "EQUITY",
+      query: {
+        operator: "and",
+        operands: [
+          { operator: "eq", operands: ["region", "us"] },
+          sectorQuery,
+          // A low cap floor lets thin-coverage micro/small-caps (sometimes with
+          // just 1-2 analysts) dominate the "best average rating" sort purely
+          // from small-sample unanimity, crowding out well-covered large caps.
+          // $10B biases toward names actually likely to clear the 9-analyst
+          // minimum applied after this fetch.
+          { operator: "gt", operands: ["intradaymarketcap", 10000000000] },
+        ],
+      },
+    };
+
+    return fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": USER_AGENT,
+        ...(auth ? { Cookie: auth.cookie } : {}),
+      },
+      body: JSON.stringify(body),
+      next: { revalidate: 0 },
+    });
+  }
+
+  let res = await fetchOnce(await getYahooAuth());
+  if (res.status === 401) {
+    cachedYahooAuth = null;
+    res = await fetchOnce(await getYahooAuth());
+  }
+  if (!res.ok) return [];
+
+  const json = await res.json();
+  type RawQuote = {
+    symbol?: string;
+    shortName?: string;
+    longName?: string;
+    regularMarketPrice?: number;
+    regularMarketChangePercent?: number;
+    averageAnalystRating?: string;
+  };
+  const quotes: RawQuote[] = json?.finance?.result?.[0]?.quotes ?? [];
+
+  return quotes
+    .filter((q): q is RawQuote & { symbol: string } => typeof q.symbol === "string")
+    .map((q) => ({
+      symbol: q.symbol,
+      name: q.longName ?? q.shortName ?? q.symbol,
+      price: typeof q.regularMarketPrice === "number" ? q.regularMarketPrice : null,
+      changePercent: typeof q.regularMarketChangePercent === "number" ? q.regularMarketChangePercent : null,
+      averageAnalystRating: typeof q.averageAnalystRating === "string" ? q.averageAnalystRating : null,
+    }));
+}
+
+export type AnalystRatingDetail = {
+  recommendationKey: string | null;
+  recommendationMean: number | null;
+  numberOfAnalystOpinions: number | null;
+  targetLowPrice: number | null;
+  targetMeanPrice: number | null;
+  targetHighPrice: number | null;
+  trend: { strongBuy: number; buy: number; hold: number; sell: number; strongSell: number } | null;
+};
+
+/** The fuller analyst-recommendation breakdown shown in each equity's ratings dropdown. */
+export async function getAnalystRatingDetail(symbol: string): Promise<AnalystRatingDetail | null> {
+  async function fetchOnce(auth: YahooAuth | null) {
+    const url = new URL(
+      `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}`
+    );
+    url.searchParams.set("modules", "financialData,recommendationTrend");
+    if (auth) url.searchParams.set("crumb", auth.crumb);
+
+    return fetch(url, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        ...(auth ? { Cookie: auth.cookie } : {}),
+      },
+      next: { revalidate: 0 },
+    });
+  }
+
+  // A burst of ~100+ of these individual per-symbol requests (one per
+  // candidate equity, across every sector) reliably gets some fraction
+  // connection-reset or otherwise dropped by Yahoo rather than answered with
+  // a clean error response, so a single transient failure here is retried
+  // once after a short delay before being treated as a real failure.
+  async function attempt(): Promise<Response | null> {
+    try {
+      let res = await fetchOnce(await getYahooAuth());
+      if (res.status === 401) {
+        cachedYahooAuth = null;
+        res = await fetchOnce(await getYahooAuth());
+      }
+      return res;
+    } catch {
+      return null;
+    }
+  }
+
+  let res: Response | null = null;
+  for (const delayMs of [0, 400, 900]) {
+    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    res = await attempt();
+    if (res?.ok) break;
+  }
+  if (!res || !res.ok) return null;
+
+  const json = await res.json();
+  const result = json?.quoteSummary?.result?.[0];
+  const financialData = result?.financialData;
+  if (!financialData) return null;
+
+  const trendPeriod = result?.recommendationTrend?.trend?.[0];
+  const trend =
+    trendPeriod &&
+    [trendPeriod.strongBuy, trendPeriod.buy, trendPeriod.hold, trendPeriod.sell, trendPeriod.strongSell].every(
+      (v) => typeof v === "number"
+    )
+      ? {
+          strongBuy: trendPeriod.strongBuy,
+          buy: trendPeriod.buy,
+          hold: trendPeriod.hold,
+          sell: trendPeriod.sell,
+          strongSell: trendPeriod.strongSell,
+        }
+      : null;
+
+  return {
+    recommendationKey: typeof financialData.recommendationKey === "string" ? financialData.recommendationKey : null,
+    recommendationMean: rawNumber(financialData.recommendationMean),
+    numberOfAnalystOpinions: rawNumber(financialData.numberOfAnalystOpinions),
+    targetLowPrice: rawNumber(financialData.targetLowPrice),
+    targetMeanPrice: rawNumber(financialData.targetMeanPrice),
+    targetHighPrice: rawNumber(financialData.targetHighPrice),
+    trend,
+  };
+}
