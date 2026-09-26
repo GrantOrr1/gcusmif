@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatPhoenixDateTime } from "@/lib/format";
 
 type ProgressNote = { id: number; ticker: string; note: string; author: string; createdAt: string };
 
@@ -130,12 +131,7 @@ export default function StepsModal({
               <div key={n.id} className="rounded-md border border-border bg-background p-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold text-foreground">{n.author}</p>
-                  <p className="text-xs text-muted">
-                    {new Date(n.createdAt).toLocaleString(undefined, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </p>
+                  <p className="text-xs text-muted">{formatPhoenixDateTime(n.createdAt)}</p>
                 </div>
                 <p className="mt-1 text-sm text-foreground">{n.note}</p>
               </div>

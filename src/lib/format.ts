@@ -65,3 +65,20 @@ export function formatPointDateTime(dateStr: string): string {
   }
   return dateStr;
 }
+
+/**
+ * SQLite's `datetime('now')` returns UTC as "YYYY-MM-DD HH:MM:SS" with no
+ * timezone marker, which browsers parse as local time rather than UTC —
+ * shifting the displayed time by the viewer's own offset. This normalizes it
+ * to a real UTC instant, then always renders in Phoenix time (fixed offset
+ * year-round, since Arizona doesn't observe daylight saving) regardless of
+ * the viewer's own device timezone.
+ */
+export function formatPhoenixDateTime(sqliteUtc: string): string {
+  const iso = sqliteUtc.includes("T") ? sqliteUtc : `${sqliteUtc.replace(" ", "T")}Z`;
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "America/Phoenix",
+  });
+}
