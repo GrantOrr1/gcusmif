@@ -148,6 +148,14 @@ if (!isBuildPhase) {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS progress_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ticker TEXT NOT NULL,
+      note TEXT NOT NULL,
+      author TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS rating_submissions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       target_type TEXT NOT NULL,

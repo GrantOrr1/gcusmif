@@ -8,6 +8,7 @@ import { formatPrice, formatPercent } from "@/lib/format";
 import type { SectorInfo } from "@/lib/sectors";
 import RatingModal from "@/components/ratings/RatingModal";
 import ActionsMenu from "@/components/ratings/ActionsMenu";
+import StepsModal from "@/components/progress/StepsModal";
 import { ratingTone, type Rating } from "@/lib/ratings";
 
 type AssignableMember = { name: string; role: string };
@@ -174,15 +175,19 @@ export default function CoverageItems({
   items,
   sectors,
   isPortfolioManager,
+  isSectorHead,
   canRate,
   mySector,
+  myName,
   assignableTeam,
 }: {
   items: CoverageHolding[];
   sectors: SectorInfo[];
   isPortfolioManager: boolean;
+  isSectorHead?: boolean;
   canRate: boolean;
   mySector?: string;
+  myName?: string;
   assignableTeam: AssignableMember[];
 }) {
   const router = useRouter();
@@ -191,9 +196,18 @@ export default function CoverageItems({
   const [view, setView] = useState<"grid" | "list">("list");
   const [managing, setManaging] = useState<CoverageHolding | null>(null);
   const [ratingItem, setRatingItem] = useState<CoverageHolding | null>(null);
+  const [stepsItem, setStepsItem] = useState<CoverageHolding | null>(null);
 
   function canManage(item: CoverageHolding): boolean {
     return isPortfolioManager || item.sector === mySector;
+  }
+
+  function canAddStep(item: CoverageHolding): boolean {
+    return (
+      isPortfolioManager ||
+      (!!isSectorHead && item.sector === mySector) ||
+      (!!myName && item.assignedTo.includes(myName))
+    );
   }
 
   async function saveRating(
@@ -312,6 +326,14 @@ export default function CoverageItems({
                       {hasRating(item) ? "Edit Holdings Rating" : "Add Holdings Rating"}
                     </button>
                   )}
+                  {!!myName && (
+                    <button
+                      onClick={() => setStepsItem(item)}
+                      className="rounded-md border border-border px-2 py-1 text-xs font-medium text-muted hover:border-brand hover:text-foreground"
+                    >
+                      Steps
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -367,6 +389,7 @@ export default function CoverageItems({
                           },
                         ]
                       : []),
+                    ...(myName ? [{ label: "Steps", onClick: () => setStepsItem(item) }] : []),
                   ]}
                 />
               </div>
@@ -401,6 +424,14 @@ export default function CoverageItems({
           }
           onSave={(data) => saveRating(ratingItem.ticker, data)}
           onClose={() => setRatingItem(null)}
+        />
+      )}
+
+      {stepsItem && (
+        <StepsModal
+          ticker={stepsItem.ticker}
+          canAdd={canAddStep(stepsItem)}
+          onClose={() => setStepsItem(null)}
         />
       )}
     </div>

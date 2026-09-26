@@ -10,6 +10,7 @@ import type { SectorInfo } from "@/lib/sectors";
 import type { Quote } from "@/lib/yahoo";
 import RatingModal from "@/components/ratings/RatingModal";
 import ActionsMenu from "@/components/ratings/ActionsMenu";
+import StepsModal from "@/components/progress/StepsModal";
 import { ratingTone, type Rating } from "@/lib/ratings";
 
 type ItemWithQuote = WatchlistItem & { quote: Quote | null };
@@ -55,10 +56,14 @@ function ItemCard({
   item,
   canRate,
   onRate,
+  showStep,
+  onStep,
 }: {
   item: ItemWithQuote;
   canRate: boolean;
   onRate: () => void;
+  showStep: boolean;
+  onStep: () => void;
 }) {
   const quote = item.quote;
   const up = (quote?.change ?? 0) >= 0;
@@ -86,7 +91,17 @@ function ItemCard({
       <div className="mt-2 min-h-[18px]">
         <AssigneeList names={item.assignedTo} />
       </div>
-      <div className="mt-auto pt-3">{canRate && <RatingButton item={item} onClick={onRate} />}</div>
+      <div className="mt-auto flex items-center gap-1.5 pt-3">
+        {canRate && <RatingButton item={item} onClick={onRate} />}
+        {showStep && (
+          <button
+            onClick={onStep}
+            className="shrink-0 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted hover:border-brand hover:text-foreground"
+          >
+            Steps
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -97,10 +112,14 @@ function ItemRow({
   item,
   canRate,
   onRate,
+  showStep,
+  onStep,
 }: {
   item: ItemWithQuote;
   canRate: boolean;
   onRate: () => void;
+  showStep: boolean;
+  onStep: () => void;
 }) {
   const quote = item.quote;
   const up = (quote?.change ?? 0) >= 0;
@@ -139,16 +158,12 @@ function ItemRow({
         <AssigneeList names={item.assignedTo} />
       </div>
       <ActionsMenu
-        actions={
-          canRate
-            ? [
-                {
-                  label: hasRating(item) ? "Edit Coverage Rating" : "Add Coverage Rating",
-                  onClick: onRate,
-                },
-              ]
-            : []
-        }
+        actions={[
+          ...(canRate
+            ? [{ label: hasRating(item) ? "Edit Coverage Rating" : "Add Coverage Rating", onClick: onRate }]
+            : []),
+          ...(showStep ? [{ label: "Steps", onClick: onStep }] : []),
+        ]}
       />
     </div>
   );
@@ -205,6 +220,7 @@ export default function WatchlistItems({
   const [personQuery, setPersonQuery] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [ratingItem, setRatingItem] = useState<ItemWithQuote | null>(null);
+  const [stepsItem, setStepsItem] = useState<ItemWithQuote | null>(null);
 
   function canRate(): boolean {
     return !!myName;
@@ -212,6 +228,14 @@ export default function WatchlistItems({
 
   function autoApprove(item: ItemWithQuote): boolean {
     return isPortfolioManager || (isSectorHead && item.sector === mySector);
+  }
+
+  function canAddStep(item: ItemWithQuote): boolean {
+    return (
+      isPortfolioManager ||
+      (isSectorHead && item.sector === mySector) ||
+      (!!myName && item.assignedTo.includes(myName))
+    );
   }
 
   async function saveRating(
@@ -290,6 +314,8 @@ export default function WatchlistItems({
               item={item}
               canRate={canRate()}
               onRate={() => setRatingItem(item)}
+              showStep={!!myName}
+              onStep={() => setStepsItem(item)}
             />
           ))}
         </div>
@@ -301,6 +327,8 @@ export default function WatchlistItems({
               item={item}
               canRate={canRate()}
               onRate={() => setRatingItem(item)}
+              showStep={!!myName}
+              onStep={() => setStepsItem(item)}
             />
           ))}
         </div>
@@ -319,6 +347,14 @@ export default function WatchlistItems({
           }
           onSave={(data) => saveRating(ratingItem.id, data)}
           onClose={() => setRatingItem(null)}
+        />
+      )}
+
+      {stepsItem && (
+        <StepsModal
+          ticker={stepsItem.ticker}
+          canAdd={canAddStep(stepsItem)}
+          onClose={() => setStepsItem(null)}
         />
       )}
     </div>

@@ -77,8 +77,10 @@ export default async function CoveragePage() {
         items={items}
         sectors={SECTOR_INFO}
         isPortfolioManager={isPortfolioManager}
+        isSectorHead={isSectorHead}
         canRate={!!me}
         mySector={me?.sector}
+        myName={me?.name}
         assignableTeam={assignableTeam}
       />
     </div>
