@@ -46,7 +46,7 @@ function RatingButton({ item, onClick }: { item: ItemWithQuote; onClick: () => v
       onClick={onClick}
       className="shrink-0 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted hover:border-brand hover:text-foreground"
     >
-      {hasRating(item) ? "Edit Watchlist Rating" : "Add Watchlist Rating"}
+      {hasRating(item) ? "Edit Coverage Rating" : "Add Coverage Rating"}
     </button>
   );
 }
@@ -143,7 +143,7 @@ function ItemRow({
           canRate
             ? [
                 {
-                  label: hasRating(item) ? "Edit Watchlist Rating" : "Add Watchlist Rating",
+                  label: hasRating(item) ? "Edit Coverage Rating" : "Add Coverage Rating",
                   onClick: onRate,
                 },
               ]
@@ -255,7 +255,7 @@ export default function WatchlistItems({
                 : "border-border text-muted hover:text-foreground"
             }`}
           >
-            Entire Watchlist
+            Entire Coverage
           </button>
           {activeSectors.map((s) => (
             <button
@@ -308,7 +308,7 @@ export default function WatchlistItems({
 
       {ratingItem && (
         <RatingModal
-          title={`${hasRating(ratingItem) ? "Edit" : "Add"} Watchlist Rating — ${ratingItem.ticker}`}
+          title={`${hasRating(ratingItem) ? "Edit" : "Add"} Coverage Rating — ${ratingItem.ticker}`}
           initialRating={ratingItem.rating}
           initialTargetPrice={ratingItem.targetPrice}
           initialTriggerPrice={ratingItem.triggerPrice}

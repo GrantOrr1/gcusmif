@@ -10,7 +10,7 @@ import PendingRatingApprovals from "@/components/ratings/PendingRatingApprovals"
 import MyPendingRatings from "@/components/ratings/MyPendingRatings";
 
 export const metadata = {
-  title: "Coverage | Student Managed Investment Fund",
+  title: "Holdings | Student Managed Investment Fund",
 };
 
 export default async function CoveragePage() {
@@ -52,7 +52,7 @@ export default async function CoveragePage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Coverage</h1>
+        <h1 className="text-3xl font-bold text-foreground">Holdings</h1>
         <p className="mt-1 text-sm text-muted">
           Assign the analysts responsible for covering each fund holding, and rate holdings you cover.
         </p>

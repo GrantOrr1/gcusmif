@@ -11,7 +11,7 @@ import PendingRatingApprovals from "@/components/ratings/PendingRatingApprovals"
 import MyPendingRatings from "@/components/ratings/MyPendingRatings";
 
 export const metadata = {
-  title: "Watchlist | Student Managed Investment Fund",
+  title: "Coverage | Student Managed Investment Fund",
 };
 
 export default async function WatchlistPage() {
@@ -52,7 +52,7 @@ export default async function WatchlistPage() {
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Watchlist</h1>
+          <h1 className="text-3xl font-bold text-foreground">Coverage</h1>
           <p className="mt-1 text-sm text-muted">
             Equities our analysts are tracking.
           </p>
@@ -72,20 +72,20 @@ export default async function WatchlistPage() {
         <div className="mt-6">
           <PendingRatingApprovals
             initialItems={pendingForReview}
-            heading="Watchlist Ratings Awaiting Approval"
+            heading="Coverage Ratings Awaiting Approval"
           />
         </div>
       )}
 
       {myPending.length > 0 && (
         <div className="mt-6">
-          <MyPendingRatings items={myPending} heading="Your Watchlist Ratings Awaiting Approval" />
+          <MyPendingRatings items={myPending} heading="Your Coverage Ratings Awaiting Approval" />
         </div>
       )}
 
       {itemsWithQuotes.length === 0 ? (
         <p className="mt-10 text-sm text-muted">
-          No equities on the watchlist yet. {canAdd ? "Add the first one above." : "Check back soon."}
+          No equities on the coverage list yet. {canAdd ? "Add the first one above." : "Check back soon."}
         </p>
       ) : (
         <WatchlistItems

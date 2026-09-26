@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
-import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
+import { isSamePerson, hasContentEditorAccess } from "@/lib/team";
 import { listCalendarEvents } from "@/lib/calendarStore";
 import { listRecurringEvents, listRecurringExceptions } from "@/lib/recurringEvents";
 import { withCoverage } from "@/lib/tickerCoverage";
@@ -25,7 +25,7 @@ export default async function CalendarPage() {
     );
   }
 
-  const isPortfolioManager = hasPortfolioManagerAccess(me);
+  const isPortfolioManager = hasContentEditorAccess(me);
   const canAdd = isPortfolioManager || !!me?.role.includes("Sector Head");
   const canAddEarnings = !!me;
 

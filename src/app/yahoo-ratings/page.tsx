@@ -34,7 +34,9 @@ export default async function YahooRatingsPage() {
   const session = await auth();
   const me = TEAM.find((m) => isSamePerson(session?.user?.name, m));
 
-  if (!me || me.role === "Analyst") {
+  // Excludes any plain-analyst tier (e.g. "Analyst", "Mentee Analyst") but not
+  // "Senior Analyst", which does include this page.
+  if (!me || (me.role.includes("Analyst") && !me.role.includes("Senior"))) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h1 className="text-3xl font-bold text-foreground">Yahoo Ratings</h1>

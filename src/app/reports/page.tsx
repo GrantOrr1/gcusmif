@@ -15,7 +15,7 @@ export const metadata = {
 
 const TYPE_LABELS: Record<string, string> = {
   equity_report: "Equity Report",
-  coverage_watchlist_report: "Watchlist Report",
+  coverage_watchlist_report: "Coverage Report",
   financial_model: "Financial Model",
 };
 
@@ -62,7 +62,7 @@ export default async function ReportsPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Reports</h1>
           <p className="mt-2 text-sm text-muted">
-            Equity Reports, Watchlist Reports, and Financial Models from our analysts.
+            Equity Reports, Coverage Reports, and Financial Models from our analysts.
           </p>
         </div>
         {canUpload && (

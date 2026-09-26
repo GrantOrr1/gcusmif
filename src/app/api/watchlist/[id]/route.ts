@@ -24,7 +24,7 @@ export async function PATCH(
   const id = Number(rawId);
   const item = getWatchlistItem(id);
   if (!item) {
-    return NextResponse.json({ error: "Watchlist item not found" }, { status: 404 });
+    return NextResponse.json({ error: "Coverage item not found" }, { status: 404 });
   }
 
   const isPortfolioManager = hasPortfolioManagerAccess(me);

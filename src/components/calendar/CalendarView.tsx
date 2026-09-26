@@ -475,7 +475,7 @@ export default function CalendarView({
 
             {selectedEvent.ticker && (
               <div className="mt-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted">Coverage</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted">Holdings</p>
                 {selectedEvent.coveringNames.length > 0 ? (
                   <div className="mt-2 flex flex-col gap-2">
                     {selectedEvent.coveringNames.map((name) => (

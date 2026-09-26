@@ -7,7 +7,7 @@ const REPORT_TYPE_OPTIONS: { value: string; label: string; accept: string }[] = 
   { value: "equity_report", label: "Equity Report", accept: ".pdf,application/pdf" },
   {
     value: "coverage_watchlist_report",
-    label: "Watchlist Report",
+    label: "Coverage Report",
     accept: ".pdf,application/pdf",
   },
   {

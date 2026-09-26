@@ -89,7 +89,7 @@ export default function AddWatchlistForm({
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        setError(json?.error ?? "Could not add to watchlist.");
+        setError(json?.error ?? "Could not add to coverage.");
         return;
       }
       reset();
@@ -105,7 +105,7 @@ export default function AddWatchlistForm({
         onClick={() => setOpen(true)}
         className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
       >
-        + Add to Watchlist
+        + Add to Coverage
       </button>
     );
   }

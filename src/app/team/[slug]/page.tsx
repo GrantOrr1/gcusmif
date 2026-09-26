@@ -16,7 +16,7 @@ import ProfileEditor from "@/components/team/ProfileEditor";
 
 const TYPE_LABELS: Record<string, string> = {
   equity_report: "Equity Report",
-  coverage_watchlist_report: "Watchlist Report",
+  coverage_watchlist_report: "Coverage Report",
   financial_model: "Financial Model",
 };
 
@@ -84,7 +84,7 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
         <div className="flex flex-col gap-6">
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">Coverage</h2>
+              <h2 className="text-sm font-semibold text-foreground">Holdings</h2>
               {sectorInfo && (
                 <Link
                   href={`/portfolio/${sectorInfo.slug}`}
@@ -96,7 +96,7 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
             </div>
             <div className="rounded-lg border border-border bg-surface p-3">
               {coverageHoldings.length === 0 ? (
-                <p className="text-xs text-muted">No coverage equities assigned yet.</p>
+                <p className="text-xs text-muted">No holdings assigned yet.</p>
               ) : (
                 <ul className="space-y-1.5">
                   {coverageHoldings.map((h) => (
@@ -122,7 +122,7 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
           </div>
 
           <div>
-            <h2 className="mb-2 text-sm font-semibold text-foreground">Equity Watchlist</h2>
+            <h2 className="mb-2 text-sm font-semibold text-foreground">Equity Coverage</h2>
             <div className="rounded-lg border border-border bg-surface p-3">
               {profile.watchlist.length > 0 ? (
                 <ul className="space-y-1.5">
@@ -138,7 +138,7 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-muted">No watchlist equities yet.</p>
+                <p className="text-xs text-muted">No coverage equities yet.</p>
               )}
             </div>
           </div>

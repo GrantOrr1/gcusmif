@@ -28,7 +28,7 @@ import ReportsHeightSync from "@/components/equity/ReportsHeightSync";
 
 const TYPE_LABELS: Record<string, string> = {
   equity_report: "Equity Report",
-  coverage_watchlist_report: "Watchlist Report",
+  coverage_watchlist_report: "Coverage Report",
   financial_model: "Financial Model",
 };
 
@@ -74,7 +74,7 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
     .map((name) => TEAM.find((m) => m.name === name))
     .filter((m): m is (typeof TEAM)[number] => !!m);
   const upcomingEarningsCall = getUpcomingEarningsCallForTicker(ticker);
-  const coveringTitle = (coverage?.assignedTo.length ?? 0) > 0 ? "Coverage Team" : "Watching";
+  const coveringTitle = (coverage?.assignedTo.length ?? 0) > 0 ? "Holdings Team" : "Watching";
   const edgarFilingsUrl = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(ticker)}&type=&dateb=&owner=include&count=40`;
 
   const up = (quote.change ?? 0) >= 0;

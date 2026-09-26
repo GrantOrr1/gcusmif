@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
-import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
+import { isSamePerson, hasContentEditorAccess } from "@/lib/team";
 import { getCalendarEvent, deleteCalendarEvent } from "@/lib/calendarStore";
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,7 +18,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   const me = TEAM.find((m) => isSamePerson(session.user?.name, m));
-  const isPortfolioManager = hasPortfolioManagerAccess(me);
+  const isPortfolioManager = hasContentEditorAccess(me);
   const isCreator = me?.name === event.createdBy;
   if (!me || !(isPortfolioManager || isCreator)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

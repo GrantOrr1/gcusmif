@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
-import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
+import { isSamePerson, hasContentEditorAccess } from "@/lib/team";
 import { getRecurringEvent, updateRecurringEventTime, addRecurringException } from "@/lib/recurringEvents";
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -11,7 +11,7 @@ async function requirePortfolioManager() {
   const session = await auth();
   if (!session) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   const me = TEAM.find((m) => isSamePerson(session.user?.name, m));
-  if (!hasPortfolioManagerAccess(me)) {
+  if (!hasContentEditorAccess(me)) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
   return { me };

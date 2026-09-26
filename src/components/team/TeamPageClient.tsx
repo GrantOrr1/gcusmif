@@ -17,6 +17,10 @@ const SECTOR_ORDER = [
   "Industrials",
   "Energy",
   "Industry Agnostic",
+  // Unofficial sectors — advisory roles with no dedicated portfolio section,
+  // shown here only so they have a home on the Team page.
+  "Fixed Income Advisor",
+  "Alumni Advisor",
 ];
 
 function isLeadership(role: string): boolean {

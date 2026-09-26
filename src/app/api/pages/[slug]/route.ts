@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
-import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
+import { isSamePerson, hasContentEditorAccess } from "@/lib/team";
 import { upsertPageContent, type SitePageSlug } from "@/lib/sitePages";
 
 const EDITABLE_SLUGS: SitePageSlug[] = ["about", "investor-thesis"];
@@ -18,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sl
   }
 
   const me = TEAM.find((m) => isSamePerson(session.user?.name, m));
-  if (!me || !hasPortfolioManagerAccess(me)) {
+  if (!me || !hasContentEditorAccess(me)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

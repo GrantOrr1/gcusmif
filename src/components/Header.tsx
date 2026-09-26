@@ -13,7 +13,7 @@ const BASE_TABS = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
   { href: "/portfolio", label: "Portfolio" },
-  { href: "/coverage", label: "Coverage" },
+  { href: "/coverage", label: "Holdings" },
   { href: "/reports", label: "Reports" },
   { href: "/team", label: "Team" },
   { href: "/donate", label: "Donate" },
@@ -96,7 +96,9 @@ export default function Header() {
 
   const me = status === "authenticated" ? TEAM.find((m) => isSamePerson(session?.user?.name, m)) : undefined;
   const canSeeManagerTabs = !!me && (hasPortfolioManagerAccess(me) || me.role.includes("Sector Head"));
-  const canSeeYahooRatings = !!me && me.role !== "Analyst";
+  // Excludes any plain-analyst tier (e.g. "Analyst", "Mentee Analyst") but not
+  // "Senior Analyst", matching the gate on the Yahoo Ratings page itself.
+  const canSeeYahooRatings = !!me && !(me.role.includes("Analyst") && !me.role.includes("Senior"));
 
   useEffect(() => {
     const bump = () => setRatingsRefreshKey((k) => k + 1);
@@ -156,7 +158,7 @@ export default function Header() {
           </span>
           <span className="hidden sm:inline">SMIF</span>
           <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted">
-            Beta 2.3
+            Beta 2.4
           </span>
         </Link>
 
@@ -252,7 +254,7 @@ export default function Header() {
                         href="/coverage"
                         className="relative block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-background"
                       >
-                        Coverage
+                        Holdings
                         {showCoverageBadge && (
                           <span className="absolute right-2 top-2.5 h-2 w-2 rounded-full bg-negative" />
                         )}
@@ -261,7 +263,7 @@ export default function Header() {
                         href="/watchlist"
                         className="relative block rounded-md px-3 py-2 text-sm text-muted hover:bg-background hover:text-foreground"
                       >
-                        Watchlist
+                        Coverage
                         {showWatchlistBadge && (
                           <span className="absolute right-2 top-2.5 h-2 w-2 rounded-full bg-negative" />
                         )}
@@ -458,7 +460,7 @@ export default function Header() {
                         onClick={() => setMenuOpen(false)}
                         className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-muted"
                       >
-                        Coverage
+                        Holdings
                         {showCoverageBadge && <span className="h-2 w-2 rounded-full bg-negative" />}
                       </Link>
                       <Link
@@ -466,7 +468,7 @@ export default function Header() {
                         onClick={() => setMenuOpen(false)}
                         className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-muted"
                       >
-                        Watchlist
+                        Coverage
                         {showWatchlistBadge && <span className="h-2 w-2 rounded-full bg-negative" />}
                       </Link>
                     </div>

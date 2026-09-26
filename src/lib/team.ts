@@ -47,8 +47,30 @@ export function isSamePerson(sessionName: string | null | undefined, person: Tea
  * Grant Orr has been granted the same access powers as the Portfolio Manager,
  * in addition to his own Senior Analyst title — a one-off exception, not a
  * role change, so his displayed title/sector stay unchanged everywhere.
+ *
+ * The Alumni Advisor tier gets the same access by design (not a one-off) —
+ * whoever holds that title going forward should get it too — except for
+ * actually editing attendance entries, which stays limited to Sector Heads;
+ * see the attendance page/API routes, where "canEdit" is checked separately
+ * from this function.
  */
 export function hasPortfolioManagerAccess(person: TeamMember | null | undefined): boolean {
   if (!person) return false;
-  return person.role === "Portfolio Manager" || person.name === "Grant Orr";
+  return (
+    person.role === "Portfolio Manager" || person.name === "Grant Orr" || person.sector === "Alumni Advisor"
+  );
+}
+
+/**
+ * Maya Jacobs and Maddy Field handle marketing/content for the fund (noted
+ * informally in the roster, not an official title/role change) and have been
+ * granted edit access to the Calendar, Investor Thesis, and About pages
+ * specifically — not the broader Portfolio Manager access those same pages'
+ * other gates imply for everyone else.
+ */
+export function hasContentEditorAccess(person: TeamMember | null | undefined): boolean {
+  if (!person) return false;
+  return (
+    hasPortfolioManagerAccess(person) || person.name === "Maya Jacobs" || person.name === "Maddy Field"
+  );
 }

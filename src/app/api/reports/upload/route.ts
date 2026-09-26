@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     }
   } else if (!isPdf(file)) {
     return NextResponse.json(
-      { error: "Equity Reports and Coverage Watchlist Reports must be a PDF" },
+      { error: "Equity Reports and Coverage Reports must be a PDF" },
       { status: 400 }
     );
   }

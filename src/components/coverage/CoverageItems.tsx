@@ -96,7 +96,7 @@ function ManageModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
       <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-5">
-        <h2 className="text-lg font-bold text-foreground">Assign Coverage — {ticker}</h2>
+        <h2 className="text-lg font-bold text-foreground">Assign Holdings — {ticker}</h2>
         <p className="mt-1 text-xs text-muted">Select who covers this holding.</p>
         <div className="mt-3 flex max-h-56 flex-wrap gap-1.5 overflow-y-auto rounded-md border border-border bg-background p-2">
           {assignableTeam.map((m) => {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
-import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
+import { isSamePerson, hasContentEditorAccess } from "@/lib/team";
 import { listCalendarEvents, addCalendarEvent } from "@/lib/calendarStore";
 import { RECURRING_COLOR, EARNINGS_COLOR } from "@/lib/calendarColors";
 import { withCoverage } from "@/lib/tickerCoverage";
@@ -13,7 +13,7 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const TICKER_RE = /^[A-Z0-9.-]{1,10}$/;
 
 function canManageCalendar(person: TeamMember | undefined): boolean {
-  return hasPortfolioManagerAccess(person) || !!person?.role.includes("Sector Head");
+  return hasContentEditorAccess(person) || !!person?.role.includes("Sector Head");
 }
 
 export async function GET() {

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
-import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
+import { isSamePerson, hasContentEditorAccess } from "@/lib/team";
 import { getPageContent } from "@/lib/sitePages";
 import PageContent from "@/components/pages/PageContent";
 import PageContentEditor from "@/components/pages/PageContentEditor";
@@ -27,7 +27,7 @@ Summarize position sizing limits, stop-loss or review triggers, and how the fund
 export default async function InvestorThesisPage() {
   const session = await auth();
   const me = TEAM.find((m) => isSamePerson(session?.user?.name, m));
-  const canEdit = hasPortfolioManagerAccess(me);
+  const canEdit = hasContentEditorAccess(me);
 
   const content = getPageContent("investor-thesis") ?? DEFAULT_CONTENT;
 
