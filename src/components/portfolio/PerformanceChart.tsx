@@ -26,10 +26,18 @@ export default function PerformanceChart({
   initialRange,
   initialData,
   sectorOrder = [],
+  ytdOverride,
 }: {
   initialRange: RangeKey;
   initialData: PerformanceSeries;
   sectorOrder?: string[];
+  /** The fund's own official YTD return (from the portfolio spreadsheet),
+   * shown instead of the chart's own "if held all year" simulated return
+   * when the YTD range is selected, so this header always matches the YTD
+   * Return stat shown elsewhere on the page. Only applies while range==="ytd" —
+   * every other range still shows the chart's own computed return, since
+   * there's no other official figure to compare it against. */
+  ytdOverride?: number | null;
 }) {
   const [range, setRange] = useState<RangeKey>(initialRange);
   const [data, setData] = useState<PerformanceSeries>(initialData);
@@ -163,7 +171,8 @@ export default function PerformanceChart({
     setHoverIndex(Math.max(0, Math.min(data.points.length - 1, idx)));
   }
 
-  const currentReturn = data.points.at(-1)?.portfolio ?? null;
+  const currentReturn =
+    range === "ytd" && ytdOverride != null ? ytdOverride : (data.points.at(-1)?.portfolio ?? null);
   const hoverPoint = hoverIndex !== null ? data.points[hoverIndex] : null;
   const plotX = "x" in plot ? plot.x : undefined;
 

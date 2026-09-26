@@ -19,7 +19,7 @@ export default async function NewsAggregatorPage() {
     );
   }
 
-  const [top, market, us, global, eu, energy, healthcare] = await Promise.all([
+  const [top, market, us, global, eu, energy, healthcare, industrials, consumer, tmt] = await Promise.all([
     getTopIndustryNews(10).catch(() => []),
     getCategoryNews("market", 8).catch(() => []),
     getCategoryNews("us", 8).catch(() => []),
@@ -27,6 +27,9 @@ export default async function NewsAggregatorPage() {
     getCategoryNews("eu", 8).catch(() => []),
     getCategoryNews("energy", 8).catch(() => []),
     getCategoryNews("healthcare", 8).catch(() => []),
+    getCategoryNews("industrials", 8).catch(() => []),
+    getCategoryNews("consumer", 8).catch(() => []),
+    getCategoryNews("tmt", 8).catch(() => []),
   ]);
 
   return (
@@ -44,6 +47,17 @@ export default async function NewsAggregatorPage() {
           items={healthcare}
           emptyMessage="No healthcare headlines available right now."
         />
+        <IndustryNews
+          title="Industrials News"
+          items={industrials}
+          emptyMessage="No industrials headlines available right now."
+        />
+        <IndustryNews
+          title="Consumer News"
+          items={consumer}
+          emptyMessage="No consumer headlines available right now."
+        />
+        <IndustryNews title="TMT News" items={tmt} emptyMessage="No TMT headlines available right now." />
         <IndustryNews title="EU News" items={eu} emptyMessage="No EU headlines available right now." />
       </div>
     </div>

@@ -92,7 +92,12 @@ export default async function PortfolioPage() {
 
       <div className="mb-10 grid gap-6 lg:grid-cols-[1fr_260px]">
         <div>
-          <PerformanceChart initialRange="ytd" initialData={ytdSeries} sectorOrder={sectorOrder} />
+          <PerformanceChart
+            initialRange="ytd"
+            initialData={ytdSeries}
+            sectorOrder={sectorOrder}
+            ytdOverride={ytdReturn}
+          />
         </div>
 
         <div className="flex flex-col">

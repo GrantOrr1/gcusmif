@@ -19,6 +19,22 @@ const SECTOR_FEEDS: Record<string, { url: string; publisher: string }[]> = {
     { url: "https://www.medpagetoday.com/rss/headlines.xml", publisher: "MedPage Today" },
   ],
   ENER: [{ url: "https://oilprice.com/rss/main", publisher: "OilPrice.com" }],
+  IND: [
+    { url: "https://www.manufacturingdive.com/feeds/news/", publisher: "Manufacturing Dive" },
+    { url: "https://www.supplychaindive.com/feeds/news/", publisher: "Supply Chain Dive" },
+    { url: "https://www.freightwaves.com/feed", publisher: "FreightWaves" },
+  ],
+  CONS: [
+    { url: "https://www.retaildive.com/feeds/news/", publisher: "Retail Dive" },
+    { url: "https://www.grocerydive.com/feeds/news/", publisher: "Grocery Dive" },
+    { url: "https://www.restaurantdive.com/feeds/news/", publisher: "Restaurant Dive" },
+  ],
+  TMT: [
+    { url: "https://techcrunch.com/feed/", publisher: "TechCrunch" },
+    { url: "https://www.theverge.com/rss/index.xml", publisher: "The Verge" },
+    { url: "https://www.cnbc.com/id/19854910/device/rss/rss.html", publisher: "CNBC" },
+    { url: "https://www.ciodive.com/feeds/news/", publisher: "CIO Dive" },
+  ],
 };
 
 /** Shown on the Portfolio Overview page — general world/macro news, not sector-specific. */
@@ -80,6 +96,9 @@ const CATEGORY_FEEDS = {
   eu: EU_FEEDS,
   energy: SECTOR_FEEDS.ENER,
   healthcare: SECTOR_FEEDS.HC,
+  industrials: SECTOR_FEEDS.IND,
+  consumer: SECTOR_FEEDS.CONS,
+  tmt: SECTOR_FEEDS.TMT,
 } satisfies Record<string, { url: string; publisher: string }[]>;
 
 export type NewsCategory = keyof typeof CATEGORY_FEEDS;
@@ -186,7 +205,9 @@ function interleaveByPublisher(items: NewsItem[], limit: number): NewsItem[] {
   return result;
 }
 
-/** BioPharma Dive/Healthcare Dive for Healthcare, OilPrice.com for Energy — empty elsewhere. */
+/** BioPharma Dive/Healthcare Dive for Healthcare, OilPrice.com for Energy, Manufacturing/Supply
+ * Chain Dive/FreightWaves for Industrials, Retail/Grocery/Restaurant Dive for Consumer, and
+ * TechCrunch/The Verge/CNBC/CIO Dive for TMT — empty for sectors without a feed set. */
 export async function getSectorIndustryNews(sectorCode: string, limit = 6): Promise<NewsItem[]> {
   const feeds = SECTOR_FEEDS[sectorCode];
   if (!feeds || feeds.length === 0) return [];

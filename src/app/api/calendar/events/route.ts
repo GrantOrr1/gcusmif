@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
 import { isSamePerson, hasContentEditorAccess } from "@/lib/team";
 import { listCalendarEvents, addCalendarEvent } from "@/lib/calendarStore";
-import { RECURRING_COLOR, EARNINGS_COLOR } from "@/lib/calendarColors";
+import { RECURRING_COLOR, EARNINGS_COLOR, SPEAKER_EVENT_COLOR } from "@/lib/calendarColors";
 import { withCoverage } from "@/lib/tickerCoverage";
 import type { TeamMember } from "@/data/team";
 
@@ -45,9 +45,11 @@ export async function POST(req: NextRequest) {
   const endTime = typeof body?.endTime === "string" && body.endTime ? body.endTime : null;
   const ticker =
     typeof body?.ticker === "string" && body.ticker.trim() ? body.ticker.trim().toUpperCase() : null;
+  const isSpeakerEvent = body?.isSpeakerEvent === true;
 
-  // Earnings-call events (ticker set) are open to every analyst; regular
-  // events are still restricted to Sector Heads and the Portfolio Manager.
+  // Earnings-call events (ticker set) are open to every analyst; regular and
+  // speaker events are restricted to Sector Heads, the Portfolio Manager,
+  // and anyone else with content-editor access (see hasContentEditorAccess).
   if (!ticker && !canManageCalendar(me)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -70,6 +72,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid ticker" }, { status: 400 });
     }
     color = EARNINGS_COLOR;
+  } else if (isSpeakerEvent) {
+    color = SPEAKER_EVENT_COLOR;
   } else {
     if (!COLOR_RE.test(color)) {
       return NextResponse.json({ error: "Invalid color" }, { status: 400 });
@@ -83,6 +87,12 @@ export async function POST(req: NextRequest) {
     if (color === EARNINGS_COLOR) {
       return NextResponse.json(
         { error: "That color is reserved for earnings-call events" },
+        { status: 400 }
+      );
+    }
+    if (color === SPEAKER_EVENT_COLOR) {
+      return NextResponse.json(
+        { error: "That color is reserved for speaker events" },
         { status: 400 }
       );
     }

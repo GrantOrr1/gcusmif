@@ -51,8 +51,8 @@ export default async function YahooRatingsPage() {
   // Pull a larger candidate pool per sector than we need, since some will get
   // discarded below for having no recommendation or too few analyst opinions
   // backing it — the screener itself can't filter on either of those.
-  const CANDIDATE_POOL_SIZE = 32;
-  const TOP_N = 12;
+  const CANDIDATE_POOL_SIZE = 48;
+  const TOP_N = 18;
   const MIN_ANALYST_OPINIONS = 9;
 
   const sectorCandidates = await Promise.all(
@@ -91,7 +91,7 @@ export default async function YahooRatingsPage() {
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <h1 className="text-3xl font-bold text-foreground">Yahoo Ratings</h1>
       <p className="mt-1 text-sm text-muted">
-        The twelve highest-rated equities per sector, ranked by Yahoo Finance&apos;s average
+        The eighteen highest-rated equities per sector, ranked by Yahoo Finance&apos;s average
         analyst rating. Equities with no analyst recommendation, fewer than 9 analyst
         opinions, or a market cap under $10B are excluded.
       </p>

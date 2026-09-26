@@ -30,12 +30,17 @@ export default function SectorPerformanceChart({
   equities,
   initialRange,
   initialData,
+  ytdOverride,
 }: {
   sectorCode: string;
   sectorLabel: string;
   equities: EquityOption[];
   initialRange: RangeKey;
   initialData: PerformanceSeries;
+  /** The sector's own official YTD return (from the portfolio spreadsheet),
+   * shown instead of the chart's simulated return while the YTD range is
+   * selected — see the same prop on PerformanceChart for the full reasoning. */
+  ytdOverride?: number | null;
 }) {
   const [range, setRange] = useState<RangeKey>(initialRange);
   const [data, setData] = useState<PerformanceSeries>(initialData);
@@ -172,7 +177,10 @@ export default function SectorPerformanceChart({
     setHoverIndex(Math.max(0, Math.min(data.points.length - 1, idx)));
   }
 
-  const currentReturn = data.points.at(-1)?.sectors[sectorCode] ?? null;
+  const currentReturn =
+    range === "ytd" && ytdOverride != null
+      ? ytdOverride
+      : (data.points.at(-1)?.sectors[sectorCode] ?? null);
   const hoverPoint = hoverIndex !== null ? data.points[hoverIndex] : null;
   const plotX = "x" in plot ? plot.x : undefined;
 

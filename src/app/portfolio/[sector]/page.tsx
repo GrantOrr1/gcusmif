@@ -31,6 +31,8 @@ export default async function SectorPage({ params }: PageProps<"/portfolio/[sect
   const totalValue = holdings.reduce((sum, h) => sum + (h.totalValue ?? 0), 0);
   const totalCost = holdings.reduce((sum, h) => sum + (h.totalValuePaid ?? 0), 0);
   const totalReturn = totalCost > 0 ? totalValue / totalCost - 1 : null;
+  const sectorYtdReturn =
+    data.ytdSectorPerformance.find((s) => s.sector === sectorInfo.code)?.percentChange ?? null;
 
   const [ytdSeries, fiveDaySeries, industryNews] = await Promise.all([
     getPortfolioPerformance("ytd"),
@@ -107,6 +109,7 @@ export default async function SectorPage({ params }: PageProps<"/portfolio/[sect
             equities={holdings.map((h) => ({ ticker: h.ticker, companyName: h.companyName }))}
             initialRange="ytd"
             initialData={ytdSeries}
+            ytdOverride={sectorYtdReturn}
           />
         </div>
 

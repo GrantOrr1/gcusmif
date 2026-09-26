@@ -4,7 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { CalendarEvent } from "@/lib/calendarStore";
 import type { RecurringEvent, RecurringException } from "@/lib/recurringEvents";
-import { EVENT_COLOR_OPTIONS, EARNINGS_COLOR, formatTime12, weekdayName } from "@/lib/calendarColors";
+import {
+  EVENT_COLOR_OPTIONS,
+  EARNINGS_COLOR,
+  SPEAKER_EVENT_COLOR,
+  formatTime12,
+  weekdayName,
+} from "@/lib/calendarColors";
 import { slugifyName } from "@/lib/team";
 import Avatar from "@/components/team/Avatar";
 
@@ -65,6 +71,7 @@ export default function CalendarView({
   const [selection, setSelection] = useState<Selection | null>(null);
   const [addDate, setAddDate] = useState<string | null>(null);
   const [addEarningsDate, setAddEarningsDate] = useState<string | null>(null);
+  const [addSpeakerDate, setAddSpeakerDate] = useState<string | null>(null);
   const [hoverInfo, setHoverInfo] = useState<{
     title: string;
     description: string | null;
@@ -238,6 +245,17 @@ export default function CalendarView({
                 className="rounded-md border border-negative/40 px-3 py-1.5 text-sm font-semibold text-negative hover:bg-negative/10"
               >
                 + Add Earnings Call
+              </button>
+            )}
+            {canAdd && (
+              <button
+                onClick={() =>
+                  setAddSpeakerDate(toDateKey(today.getFullYear(), today.getMonth(), today.getDate()))
+                }
+                className="rounded-md border px-3 py-1.5 text-sm font-semibold hover:opacity-90"
+                style={{ borderColor: SPEAKER_EVENT_COLOR, color: SPEAKER_EVENT_COLOR }}
+              >
+                + Add Speaker Event
               </button>
             )}
             {canAdd && (
@@ -549,6 +567,17 @@ export default function CalendarView({
         />
       )}
 
+      {addSpeakerDate && (
+        <AddSpeakerEventModal
+          date={addSpeakerDate}
+          onClose={() => setAddSpeakerDate(null)}
+          onCreated={(event) => {
+            setEvents((prev) => [...prev, event]);
+            setAddSpeakerDate(null);
+          }}
+        />
+      )}
+
       {confirmDeleteRecurring && selectedRecurring && selectedRecurringDate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 text-center shadow-xl">
@@ -725,6 +754,155 @@ function AddEventModal({
               style={{ backgroundColor: c.value }}
             />
           ))}
+        </div>
+
+        {error && <p className="mt-2 text-xs text-negative">{error}</p>}
+
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddSpeakerEventModal({
+  date: initialDate,
+  onClose,
+  onCreated,
+}: {
+  date: string;
+  onClose: () => void;
+  onCreated: (event: EnrichedEvent) => void;
+}) {
+  const [date, setDate] = useState(initialDate);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!title.trim()) {
+      setError("Title is required.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/calendar/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date,
+          title,
+          description,
+          startTime: startTime || null,
+          endTime: endTime || null,
+          ticker: null,
+          isSpeakerEvent: true,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setError(body?.error ?? "Could not save. Try again.");
+        return;
+      }
+      const event: EnrichedEvent = await res.json();
+      onCreated(event);
+    } catch {
+      setError("Could not save. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <div className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-lg border border-border bg-surface p-5">
+        <h2 className="text-lg font-bold text-foreground">Add Speaker Event</h2>
+
+        <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
+          Date
+        </label>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+        />
+        <p className="mt-1 text-xs text-muted">
+          {new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </p>
+
+        <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
+          Title
+        </label>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Guest Speaker: Jane Doe"
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+        />
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium uppercase tracking-wide text-muted">
+              Start Time
+            </label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium uppercase tracking-wide text-muted">
+              End Time
+            </label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+            />
+          </div>
+        </div>
+
+        <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
+          Description
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          placeholder="Optional details…"
+          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+        />
+
+        <div className="mt-3 flex items-center gap-2 text-xs text-muted">
+          <span className="h-4 w-4 rounded-full" style={{ backgroundColor: SPEAKER_EVENT_COLOR }} />
+          Color is fixed to cyan for speaker events.
         </div>
 
         {error && <p className="mt-2 text-xs text-negative">{error}</p>}

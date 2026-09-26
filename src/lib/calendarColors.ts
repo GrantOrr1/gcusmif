@@ -1,12 +1,13 @@
 // Purple is reserved for the standing weekly recurring events (SMIF Class /
-// SMIF Meeting), and red is reserved for equity earnings-call events, so both
-// stay visually distinct from regular one-off events.
+// SMIF Meeting), red is reserved for equity earnings-call events, and cyan is
+// reserved for guest speaker events, so all three stay visually distinct from
+// regular one-off events.
 export const RECURRING_COLOR = "#7c3aed";
 export const EARNINGS_COLOR = "#dc2626";
+export const SPEAKER_EVENT_COLOR = "#0891b2";
 
 export const EVENT_COLOR_OPTIONS = [
   { label: "Blue", value: "#2563eb" },
-  { label: "Cyan", value: "#0891b2" },
   { label: "Green", value: "#16a34a" },
   { label: "Amber", value: "#d97706" },
   { label: "Pink", value: "#db2777" },
