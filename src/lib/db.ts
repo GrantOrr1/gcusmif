@@ -192,6 +192,7 @@ if (!isBuildPhase) {
   ).map((c) => c.name);
   addColumnIfMissing(profileOverrideColumns, "photo_file", "ALTER TABLE profile_overrides ADD COLUMN photo_file TEXT");
   addColumnIfMissing(profileOverrideColumns, "email", "ALTER TABLE profile_overrides ADD COLUMN email TEXT");
+  addColumnIfMissing(profileOverrideColumns, "substack_url", "ALTER TABLE profile_overrides ADD COLUMN substack_url TEXT");
 
   const calendarEventColumns = (
     db.prepare("PRAGMA table_info(calendar_events)").all() as { name: string }[]

@@ -12,6 +12,7 @@ import Avatar from "@/components/team/Avatar";
 import AssigneeList from "@/components/team/AssigneeList";
 import LinkedInBadge from "@/components/team/LinkedInBadge";
 import EmailBadge from "@/components/team/EmailBadge";
+import SubstackBadge from "@/components/team/SubstackBadge";
 import ProfileEditor from "@/components/team/ProfileEditor";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -60,6 +61,7 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
               <h1 className="text-2xl font-bold text-foreground">{person.name}</h1>
               <LinkedInBadge url={profile.linkedinUrl ?? undefined} />
               <EmailBadge email={profile.email ?? undefined} />
+              <SubstackBadge url={profile.substackUrl ?? undefined} />
             </div>
             <p className="text-brand">{person.role}</p>
             {person.sector && !person.role.includes(person.sector) && (
@@ -76,6 +78,7 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
                 initialBio={profile.bio}
                 initialLinkedinUrl={profile.linkedinUrl}
                 initialEmail={profile.email}
+                initialSubstackUrl={profile.substackUrl}
               />
             )}
           </div>

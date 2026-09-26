@@ -6,6 +6,7 @@ export type TeamMember = {
   photoUrl?: string;
   linkedinUrl?: string;
   email?: string;
+  substackUrl?: string;
 };
 
 export const TEAM: TeamMember[] = [

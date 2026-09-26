@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+const DOC_ACCEPT =
+  ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
 const REPORT_TYPE_OPTIONS: { value: string; label: string; accept: string }[] = [
-  { value: "equity_report", label: "Equity Report", accept: ".pdf,application/pdf" },
+  { value: "equity_report", label: "Equity Report", accept: DOC_ACCEPT },
   {
     value: "coverage_watchlist_report",
     label: "Coverage Report",
-    accept: ".pdf,application/pdf",
+    accept: DOC_ACCEPT,
   },
   {
     value: "financial_model",
@@ -214,7 +217,7 @@ export default function UploadReportForm({ teamMembers = [] }: { teamMembers?: T
 
         <div>
           <label className="text-xs font-medium uppercase tracking-wide text-muted">
-            File ({selectedType.value === "financial_model" ? "Excel only" : "PDF only"})
+            File ({selectedType.value === "financial_model" ? "Excel only" : "PDF or Word"})
           </label>
           <input
             key={reportType}

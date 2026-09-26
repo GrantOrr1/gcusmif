@@ -6,6 +6,7 @@ export type EffectiveProfile = {
   bio: string | null;
   linkedinUrl: string | null;
   email: string | null;
+  substackUrl: string | null;
   watchlist: string[];
 };
 
@@ -16,6 +17,7 @@ export function getEffectiveProfile(slug: string, person: TeamMember): Effective
     bio: override?.bio ?? person.bio ?? null,
     linkedinUrl: override?.linkedinUrl ?? person.linkedinUrl ?? null,
     email: override?.email ?? person.email ?? null,
+    substackUrl: override?.substackUrl ?? person.substackUrl ?? null,
     watchlist: listTickersAssignedTo(person.name),
   };
 }

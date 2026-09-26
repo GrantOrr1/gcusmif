@@ -12,6 +12,16 @@ function isPdf(file: File) {
   return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 }
 
+function isWord(file: File) {
+  const name = file.name.toLowerCase();
+  return (
+    name.endsWith(".doc") ||
+    name.endsWith(".docx") ||
+    file.type === "application/msword" ||
+    file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  );
+}
+
 function isExcel(file: File) {
   const name = file.name.toLowerCase();
   return (
@@ -59,9 +69,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-  } else if (!isPdf(file)) {
+  } else if (!isPdf(file) && !isWord(file)) {
     return NextResponse.json(
-      { error: "Equity Reports and Coverage Reports must be a PDF" },
+      { error: "Equity Reports and Coverage Reports must be a PDF or Word document" },
       { status: 400 }
     );
   }
@@ -107,9 +117,15 @@ export async function POST(req: NextRequest) {
     companyName,
     fileName: file.name,
     filePath: storedFileName,
-    mimeType: file.type || (reportType === "financial_model"
-      ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      : "application/pdf"),
+    mimeType:
+      file.type ||
+      (reportType === "financial_model"
+        ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        : file.name.toLowerCase().endsWith(".docx")
+          ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          : file.name.toLowerCase().endsWith(".doc")
+            ? "application/msword"
+            : "application/pdf"),
     sector: me.sector ?? "Unassigned",
     uploadedBy: me.name,
     coAuthors,

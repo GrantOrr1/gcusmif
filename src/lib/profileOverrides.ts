@@ -6,6 +6,7 @@ export type ProfileOverride = {
   linkedinUrl: string | null;
   photoFile: string | null;
   email: string | null;
+  substackUrl: string | null;
   updatedAt: string;
 };
 
@@ -15,6 +16,7 @@ type Row = {
   linkedin_url: string | null;
   photo_file: string | null;
   email: string | null;
+  substack_url: string | null;
   updated_at: string;
 };
 
@@ -29,13 +31,20 @@ export function getProfileOverride(slug: string): ProfileOverride | null {
     linkedinUrl: row.linkedin_url,
     photoFile: row.photo_file,
     email: row.email,
+    substackUrl: row.substack_url,
     updatedAt: row.updated_at,
   };
 }
 
 export function upsertProfileOverride(
   slug: string,
-  data: { bio?: string | null; linkedinUrl?: string | null; photoFile?: string | null; email?: string | null }
+  data: {
+    bio?: string | null;
+    linkedinUrl?: string | null;
+    photoFile?: string | null;
+    email?: string | null;
+    substackUrl?: string | null;
+  }
 ): void {
   const existing = getProfileOverride(slug);
   const bio = data.bio !== undefined ? data.bio : (existing?.bio ?? null);
@@ -43,15 +52,18 @@ export function upsertProfileOverride(
     data.linkedinUrl !== undefined ? data.linkedinUrl : (existing?.linkedinUrl ?? null);
   const photoFile = data.photoFile !== undefined ? data.photoFile : (existing?.photoFile ?? null);
   const email = data.email !== undefined ? data.email : (existing?.email ?? null);
+  const substackUrl =
+    data.substackUrl !== undefined ? data.substackUrl : (existing?.substackUrl ?? null);
 
   db.prepare(
-    `INSERT INTO profile_overrides (slug, bio, linkedin_url, photo_file, email, updated_at)
-     VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `INSERT INTO profile_overrides (slug, bio, linkedin_url, photo_file, email, substack_url, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
      ON CONFLICT(slug) DO UPDATE SET
        bio = excluded.bio,
        linkedin_url = excluded.linkedin_url,
        photo_file = excluded.photo_file,
        email = excluded.email,
+       substack_url = excluded.substack_url,
        updated_at = excluded.updated_at`
-  ).run(slug, bio, linkedinUrl, photoFile, email);
+  ).run(slug, bio, linkedinUrl, photoFile, email, substackUrl);
 }

@@ -31,6 +31,10 @@ export async function PATCH(req: NextRequest) {
       ? normalizeExternalUrl(body.linkedinUrl.trim().slice(0, 300))
       : undefined;
   const email = typeof body.email === "string" ? body.email.trim().slice(0, 200) : undefined;
+  const substackUrl =
+    typeof body.substackUrl === "string"
+      ? normalizeExternalUrl(body.substackUrl.trim().slice(0, 300))
+      : undefined;
 
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
@@ -40,6 +44,7 @@ export async function PATCH(req: NextRequest) {
     bio: bio === "" ? null : bio,
     linkedinUrl: linkedinUrl === "" ? null : linkedinUrl,
     email: email === "" ? null : email,
+    substackUrl: substackUrl === "" ? null : substackUrl,
   });
 
   return NextResponse.json({ ok: true });

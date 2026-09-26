@@ -10,18 +10,21 @@ export default function ProfileEditor({
   initialBio,
   initialLinkedinUrl,
   initialEmail,
+  initialSubstackUrl,
 }: {
   slug: string;
   name: string;
   initialBio: string | null;
   initialLinkedinUrl: string | null;
   initialEmail: string | null;
+  initialSubstackUrl: string | null;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState(initialBio ?? "");
   const [linkedinUrl, setLinkedinUrl] = useState(initialLinkedinUrl ?? "");
   const [email, setEmail] = useState(initialEmail ?? "");
+  const [substackUrl, setSubstackUrl] = useState(initialSubstackUrl ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +35,7 @@ export default function ProfileEditor({
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, bio, linkedinUrl, email }),
+        body: JSON.stringify({ slug, bio, linkedinUrl, email, substackUrl }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -96,6 +99,19 @@ export default function ProfileEditor({
         className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
       />
       <p className="mt-1 text-xs text-muted">Shown as the mail icon next to your name.</p>
+
+      <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-muted">
+        Substack URL (optional)
+      </label>
+      <input
+        value={substackUrl}
+        onChange={(e) => setSubstackUrl(e.target.value)}
+        placeholder="https://yourname.substack.com"
+        className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+      />
+      <p className="mt-1 text-xs text-muted">
+        If set, shows a Substack icon next to your name.
+      </p>
 
       {error && <p className="mt-2 text-xs text-negative">{error}</p>}
 
