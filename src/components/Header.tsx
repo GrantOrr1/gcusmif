@@ -159,7 +159,7 @@ export default function Header() {
           </span>
           <span className="hidden sm:inline">SMIF</span>
           <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted">
-            Beta 2.5
+            Beta 2.6
           </span>
         </Link>
 
