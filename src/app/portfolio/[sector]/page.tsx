@@ -9,6 +9,7 @@ import { slugifyName } from "@/lib/team";
 import { getSectorIndustryNews } from "@/lib/industryNews";
 import KpiCard from "@/components/portfolio/KpiCard";
 import HoldingsTable from "@/components/portfolio/HoldingsTable";
+import SoldHoldingsTable from "@/components/portfolio/SoldHoldingsTable";
 import SectorPerformanceChart from "@/components/portfolio/SectorPerformanceChart";
 import IndustryNews from "@/components/portfolio/IndustryNews";
 import Avatar from "@/components/team/Avatar";
@@ -27,6 +28,7 @@ export default async function SectorPage({ params }: PageProps<"/portfolio/[sect
 
   const data = await getPortfolioData();
   const holdings = data.holdings.filter((h) => h.sector === sectorInfo.code);
+  const soldHoldings = data.soldHoldings.filter((h) => h.sector === sectorInfo.code);
 
   const totalValue = holdings.reduce((sum, h) => sum + (h.totalValue ?? 0), 0);
   const totalCost = holdings.reduce((sum, h) => sum + (h.totalValuePaid ?? 0), 0);
@@ -189,6 +191,10 @@ export default async function SectorPage({ params }: PageProps<"/portfolio/[sect
           ytdReturns={ytdSeries.points.at(-1)?.holdings ?? {}}
           portfolioTotalValue={data.summary.totalValue}
         />
+      </div>
+
+      <div className="mt-10">
+        <SoldHoldingsTable soldHoldings={soldHoldings} />
       </div>
 
       <IndustryNews title="Industry News" items={industryNews} />

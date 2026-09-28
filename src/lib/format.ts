@@ -45,6 +45,11 @@ export function formatNumber(value: number | null | undefined): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
 }
 
+export function formatRatio(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)}x`;
+}
+
 /** Accepts either a "YYYY-MM-DD" date or a full ISO timestamp (intraday points). */
 export function formatShortDate(dateStr: string): string {
   if (dateStr.includes("T")) {

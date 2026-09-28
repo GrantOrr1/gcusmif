@@ -14,6 +14,7 @@ import KpiCard from "@/components/portfolio/KpiCard";
 import SectorPerformancePanel from "@/components/portfolio/SectorPerformancePanel";
 import SectorPieChart from "@/components/portfolio/SectorPieChart";
 import HoldingsTable from "@/components/portfolio/HoldingsTable";
+import SoldHoldingsTable from "@/components/portfolio/SoldHoldingsTable";
 import PerformanceChart from "@/components/portfolio/PerformanceChart";
 import TopMovers from "@/components/portfolio/TopMovers";
 import Avatar from "@/components/team/Avatar";
@@ -24,7 +25,7 @@ export const metadata = {
 
 export default async function PortfolioPage() {
   const data = await getPortfolioData();
-  const { summary, holdings, sectorAllocation, ytdPortfolioReturn } = data;
+  const { summary, holdings, soldHoldings, sectorAllocation, ytdPortfolioReturn } = data;
 
   const [ytdSeries, fiveDaySeries] = await Promise.all([
     getPortfolioPerformance("ytd"),
@@ -222,6 +223,10 @@ export default async function PortfolioPage() {
           ytdReturns={ytdSeries.points.at(-1)?.holdings ?? {}}
           portfolioTotalValue={summary.totalValue}
         />
+      </div>
+
+      <div className="mt-10">
+        <SoldHoldingsTable soldHoldings={soldHoldings} />
       </div>
     </div>
   );

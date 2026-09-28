@@ -12,6 +12,19 @@ export type Holding = {
   totalValue: number | null;
 };
 
+export type SoldHolding = {
+  ticker: string;
+  companyName: string | null;
+  pricePaid: number | null;
+  salePrice: number | null;
+  percentChange: number | null;
+  sector: string | null;
+  quantitySold: number | null;
+  costBasis: number | null;
+  proceeds: number | null;
+  realizedGain: number | null;
+};
+
 export type SectorAllocation = {
   sector: string;
   capital: number | null;
@@ -49,6 +62,7 @@ export type YtdSectorPerformance = {
 export type PortfolioData = {
   summary: PortfolioSummary;
   holdings: Holding[];
+  soldHoldings: SoldHolding[];
   sectorAllocation: SectorAllocation[];
   ytdHoldings: YtdHolding[];
   ytdSectorPerformance: YtdSectorPerformance[];
@@ -98,12 +112,17 @@ function findCol(run: HeaderCell[], matcher: RegExp): number | undefined {
 function parsePortfolioSheet(rows: Row[]): {
   summary: PortfolioSummary;
   holdings: Holding[];
+  soldHoldings: SoldHolding[];
   sectorAllocation: SectorAllocation[];
 } {
   let summaryRun: HeaderCell[] | undefined;
   let summaryRowIndex = -1;
   let holdingsRun: HeaderCell[] | undefined;
   let holdingsRowIndex = -1;
+  // Below the live holdings table sits a second "Positions Sold" table that
+  // reuses the same "Tickers" header label — this is its second occurrence.
+  let soldHoldingsRun: HeaderCell[] | undefined;
+  let soldHoldingsRowIndex = -1;
   let sectorRun: HeaderCell[] | undefined;
   let sectorRowIndex = -1;
 
@@ -115,12 +134,14 @@ function parsePortfolioSheet(rows: Row[]): {
         summaryRun = run;
         summaryRowIndex = rowIndex;
       }
-      if (
-        !holdingsRun &&
-        texts.some((t) => /^tickers?$/.test(t))
-      ) {
-        holdingsRun = run;
-        holdingsRowIndex = rowIndex;
+      if (texts.some((t) => /^tickers?$/.test(t))) {
+        if (!holdingsRun) {
+          holdingsRun = run;
+          holdingsRowIndex = rowIndex;
+        } else if (!soldHoldingsRun && rowIndex > holdingsRowIndex) {
+          soldHoldingsRun = run;
+          soldHoldingsRowIndex = rowIndex;
+        }
       }
       if (
         !sectorRun &&
@@ -223,6 +244,42 @@ function parsePortfolioSheet(rows: Row[]): {
     }
   }
 
+  const soldHoldings: SoldHolding[] = [];
+  if (soldHoldingsRun) {
+    const tickerCol = findCol(soldHoldingsRun, /^tickers?$/i)!;
+    const nameCol = findCol(soldHoldingsRun, /company name/i);
+    const pricePaidCol = findCol(soldHoldingsRun, /^price paid$/i);
+    const salePriceCol = findCol(soldHoldingsRun, /^sale price$/i);
+    const percentChangeCol = soldHoldingsRun.find(
+      (c) => c.text.toLowerCase() === "% change"
+    )?.col;
+    const sectorCol = findCol(soldHoldingsRun, /^sector$/i);
+    const quantitySoldCol = findCol(soldHoldingsRun, /quantity sold/i);
+    const costBasisCol = findCol(soldHoldingsRun, /^cost basis$/i);
+    const proceedsCol = findCol(soldHoldingsRun, /^proceeds$/i);
+    const realizedGainCol = findCol(soldHoldingsRun, /realized gain/i);
+
+    for (let r = soldHoldingsRowIndex + 1; r < rows.length; r++) {
+      const row = rows[r];
+      const ticker = cellText(row?.[tickerCol]);
+      if (!ticker) break;
+
+      soldHoldings.push({
+        ticker,
+        companyName: nameCol !== undefined ? cellText(row[nameCol]) || null : null,
+        pricePaid: pricePaidCol !== undefined ? cellNumber(row[pricePaidCol]) : null,
+        salePrice: salePriceCol !== undefined ? cellNumber(row[salePriceCol]) : null,
+        percentChange:
+          percentChangeCol !== undefined ? cellNumber(row[percentChangeCol]) : null,
+        sector: sectorCol !== undefined ? cellText(row[sectorCol]) || null : null,
+        quantitySold: quantitySoldCol !== undefined ? cellNumber(row[quantitySoldCol]) : null,
+        costBasis: costBasisCol !== undefined ? cellNumber(row[costBasisCol]) : null,
+        proceeds: proceedsCol !== undefined ? cellNumber(row[proceedsCol]) : null,
+        realizedGain: realizedGainCol !== undefined ? cellNumber(row[realizedGainCol]) : null,
+      });
+    }
+  }
+
   const sectorAllocation: SectorAllocation[] = [];
   if (sectorRun) {
     const sectorCol = findCol(sectorRun, /^sector$/i)!;
@@ -242,7 +299,7 @@ function parsePortfolioSheet(rows: Row[]): {
     }
   }
 
-  return { summary, holdings, sectorAllocation };
+  return { summary, holdings, soldHoldings, sectorAllocation };
 }
 
 /** Total Price Paid vs. Total Current Price across all YTD-tab holdings — matches the
@@ -411,7 +468,7 @@ async function loadPortfolioData(): Promise<PortfolioData> {
   const ytdSheetName = workbook.SheetNames.find((n) => n.toLowerCase() === "ytd");
 
   const portfolioRows = sheetToRows(workbook, portfolioSheetName);
-  const { summary, holdings, sectorAllocation } = parsePortfolioSheet(portfolioRows);
+  const { summary, holdings, soldHoldings, sectorAllocation } = parsePortfolioSheet(portfolioRows);
 
   let ytdHoldings: YtdHolding[] = [];
   let ytdSectorPerformance: YtdSectorPerformance[] = [];
@@ -430,6 +487,7 @@ async function loadPortfolioData(): Promise<PortfolioData> {
   return {
     summary,
     holdings,
+    soldHoldings,
     sectorAllocation,
     ytdHoldings,
     ytdSectorPerformance,

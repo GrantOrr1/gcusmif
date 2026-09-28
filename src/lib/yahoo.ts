@@ -32,7 +32,7 @@ export type Quote = {
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
-export type RangeKey = "1d" | "5d" | "1mo" | "3mo" | "6mo" | "ytd" | "1y" | "3y";
+export type RangeKey = "1d" | "5d" | "1mo" | "3mo" | "6mo" | "ytd" | "1y" | "3y" | "7y";
 
 /** Ranges plotted with intraday bars (full timestamps) instead of one point per day. */
 const INTRADAY_RANGES = new Set<RangeKey>(["1d", "5d"]);
@@ -40,7 +40,7 @@ const INTRADAY_RANGES = new Set<RangeKey>(["1d", "5d"]);
 function intervalForRange(range: RangeKey): string {
   if (range === "1d") return "5m";
   if (range === "5d") return "1h";
-  if (range === "3y") return "1wk";
+  if (range === "3y" || range === "7y") return "1wk";
   return "1d";
 }
 
@@ -249,6 +249,7 @@ export type QuoteSummaryDetails = {
   totalDebt: number | null;
   debtToEquity: number | null;
   currentRatio: number | null;
+  quickRatio: number | null;
   bookValue: number | null;
   operatingCashflow: number | null;
   freeCashflow: number | null;
@@ -324,11 +325,12 @@ type FundamentalsSeries = Map<string, number>;
 /** One data series (e.g. quarterlyDilutedEPS) from the fundamentals-timeseries endpoint, keyed by asOfDate. */
 async function fetchFundamentalsSeries(
   symbol: string,
-  types: string[]
+  types: string[],
+  lookbackDays = 500
 ): Promise<Record<string, FundamentalsSeries>> {
   async function fetchOnce(auth: YahooAuth | null) {
     const now = Math.floor(Date.now() / 1000);
-    const period1 = now - 500 * 24 * 60 * 60;
+    const period1 = now - lookbackDays * 24 * 60 * 60;
     const url = new URL(
       `https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/${encodeURIComponent(symbol)}`
     );
@@ -530,6 +532,7 @@ export async function getQuoteSummaryDetails(symbol: string): Promise<QuoteSumma
     totalDebt: rawNumber(financialData.totalDebt),
     debtToEquity: rawNumber(financialData.debtToEquity),
     currentRatio: rawNumber(financialData.currentRatio),
+    quickRatio: rawNumber(financialData.quickRatio),
     bookValue: rawNumber(keyStats.bookValue),
     operatingCashflow: rawNumber(financialData.operatingCashflow),
     freeCashflow: rawNumber(financialData.freeCashflow),
@@ -540,6 +543,266 @@ export async function getQuoteSummaryDetails(symbol: string): Promise<QuoteSumma
 
     earningsQuarters,
   };
+}
+
+/**
+ * One Comp Sheet period column's worth of data. Field names deliberately
+ * match the corresponding CompMetric.key in compMetrics.ts, so the frontend
+ * can look values up generically instead of a per-metric mapping.
+ */
+export type CompPeriodFinancials = {
+  periodKey: string; // "2026-Q3" (calendar quarter) or "2026" (calendar year)
+
+  price: number | null;
+  marketCap: number | null;
+  totalRevenue: number | null;
+  netIncomeToCommon: number | null;
+  ebitda: number | null;
+  trailingEps: number | null;
+  profitMargins: number | null;
+  operatingMargins: number | null;
+  currentRatio: number | null;
+  debtToEquity: number | null;
+  totalCash: number | null;
+  totalCashPerShare: number | null;
+  totalDebt: number | null;
+  bookValue: number | null;
+  priceToBook: number | null;
+  revenuePerShare: number | null;
+  enterpriseValue: number | null;
+
+  // For quarter periods these use a trailing-four-quarter basis (like a
+  // rolling TTM); for year periods they use the reported annual figures.
+  // Null when there isn't enough quarterly history yet to compute a trailing sum.
+  trailingPE: number | null;
+  priceToSalesTrailing12Months: number | null;
+  enterpriseToRevenue: number | null;
+  enterpriseToEbitda: number | null;
+  returnOnAssets: number | null;
+  returnOnEquity: number | null;
+};
+
+/** Calendar-quarter or calendar-year bucket for a reported-period end date, e.g. "2026-Q3" or "2026". */
+function periodKeyForDate(dateStr: string, kind: "quarter" | "year"): string {
+  const d = new Date(dateStr);
+  const year = d.getUTCFullYear();
+  if (kind === "year") return `${year}`;
+  const quarter = Math.floor(d.getUTCMonth() / 3) + 1;
+  return `${year}-Q${quarter}`;
+}
+
+type RawPeriodPoint = {
+  date: string;
+  revenue: number | null;
+  netIncome: number | null;
+  ebitda: number | null;
+  operatingIncome: number | null;
+  eps: number | null;
+  shares: number | null;
+  equity: number | null;
+  totalAssets: number | null;
+  currentAssets: number | null;
+  currentLiabilities: number | null;
+  cash: number | null;
+  totalDebt: number | null;
+};
+
+const PERIOD_FIELD_TYPES = {
+  revenue: "TotalRevenue",
+  netIncome: "NetIncome",
+  ebitda: "EBITDA",
+  operatingIncome: "OperatingIncome",
+  eps: "DilutedEPS",
+  shares: "OrdinarySharesNumber",
+  equity: "StockholdersEquity",
+  totalAssets: "TotalAssets",
+  currentAssets: "CurrentAssets",
+  currentLiabilities: "CurrentLiabilities",
+  cash: "CashAndCashEquivalents",
+  totalDebt: "TotalDebt",
+} as const;
+
+async function fetchPeriodPoints(
+  symbol: string,
+  prefix: "quarterly" | "annual",
+  lookbackDays: number
+): Promise<RawPeriodPoint[]> {
+  const typeFor = (field: keyof typeof PERIOD_FIELD_TYPES) => `${prefix}${PERIOD_FIELD_TYPES[field]}`;
+  const series = await fetchFundamentalsSeries(
+    symbol,
+    Object.keys(PERIOD_FIELD_TYPES).map((f) => typeFor(f as keyof typeof PERIOD_FIELD_TYPES)),
+    lookbackDays
+  ).catch(() => ({}) as Record<string, FundamentalsSeries>);
+
+  const dates = new Set<string>();
+  for (const field of Object.keys(PERIOD_FIELD_TYPES) as (keyof typeof PERIOD_FIELD_TYPES)[]) {
+    for (const date of (series[typeFor(field)] ?? new Map()).keys()) dates.add(date);
+  }
+
+  return Array.from(dates).map((date) => ({
+    date,
+    revenue: series[typeFor("revenue")]?.get(date) ?? null,
+    netIncome: series[typeFor("netIncome")]?.get(date) ?? null,
+    ebitda: series[typeFor("ebitda")]?.get(date) ?? null,
+    operatingIncome: series[typeFor("operatingIncome")]?.get(date) ?? null,
+    eps: series[typeFor("eps")]?.get(date) ?? null,
+    shares: series[typeFor("shares")]?.get(date) ?? null,
+    equity: series[typeFor("equity")]?.get(date) ?? null,
+    totalAssets: series[typeFor("totalAssets")]?.get(date) ?? null,
+    currentAssets: series[typeFor("currentAssets")]?.get(date) ?? null,
+    currentLiabilities: series[typeFor("currentLiabilities")]?.get(date) ?? null,
+    cash: series[typeFor("cash")]?.get(date) ?? null,
+    totalDebt: series[typeFor("totalDebt")]?.get(date) ?? null,
+  }));
+}
+
+/** Last close on or before the target date; falls back to the nearest available close. */
+function closestCloseOnOrBefore(closes: { date: string; close: number }[], targetDate: string): number | null {
+  let best: { date: string; close: number } | null = null;
+  for (const c of closes) {
+    if (c.date <= targetDate && (!best || c.date > best.date)) best = c;
+  }
+  if (best) return best.close;
+
+  let nearest: { date: string; close: number } | null = null;
+  let bestDiff = Infinity;
+  const targetMs = new Date(targetDate).getTime();
+  for (const c of closes) {
+    const diff = Math.abs(new Date(c.date).getTime() - targetMs);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      nearest = c;
+    }
+  }
+  return nearest?.close ?? null;
+}
+
+type TrailingBasis = { revenue: number | null; netIncome: number | null; ebitda: number | null; eps: number | null };
+
+/** Sum of a field across a quarter and its 3 predecessors; null if any is missing or there's not enough history. */
+function trailingFourQuarterSum(
+  sorted: RawPeriodPoint[],
+  endIndex: number,
+  field: "revenue" | "netIncome" | "ebitda" | "eps"
+): number | null {
+  if (endIndex < 3) return null;
+  let sum = 0;
+  for (let i = endIndex - 3; i <= endIndex; i++) {
+    const v = sorted[i][field];
+    if (typeof v !== "number") return null;
+    sum += v;
+  }
+  return sum;
+}
+
+/** Rolling trailing-twelve-month Revenue/Net Income/EBITDA/EPS for every reported quarter, keyed by periodKey. */
+function buildQuarterlyTrailingBasis(quarterlyPoints: RawPeriodPoint[]): Map<string, TrailingBasis> {
+  const sorted = [...quarterlyPoints].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  const out = new Map<string, TrailingBasis>();
+  sorted.forEach((point, i) => {
+    out.set(periodKeyForDate(point.date, "quarter"), {
+      revenue: trailingFourQuarterSum(sorted, i, "revenue"),
+      netIncome: trailingFourQuarterSum(sorted, i, "netIncome"),
+      ebitda: trailingFourQuarterSum(sorted, i, "ebitda"),
+      eps: trailingFourQuarterSum(sorted, i, "eps"),
+    });
+  });
+  return out;
+}
+
+/**
+ * Real per-period financials for the Comp Sheet's period columns, bucketed
+ * by calendar quarter/year so periods line up across companies with
+ * different fiscal calendars. Ratios that need a trailing-twelve-month basis
+ * (P/E, P/S, EV multiples, ROA, ROE) use a rolling trailing-four-quarter sum
+ * for quarter periods (null until 4 quarters of history exist) and the
+ * reported annual figures for year periods. Companies whose fiscal quarter
+ * doesn't land on a calendar-quarter boundary may show gaps.
+ */
+export async function getPeriodicFinancials(symbol: string): Promise<CompPeriodFinancials[]> {
+  const [quarterlyPoints, annualPoints, closesRaw] = await Promise.all([
+    fetchPeriodPoints(symbol, "quarterly", 2600),
+    fetchPeriodPoints(symbol, "annual", 2600),
+    getHistoricalCloses(symbol, "7y").catch(() => []),
+  ]);
+
+  const closes: { date: string; close: number }[] = [];
+  for (const c of closesRaw) {
+    if (c.close !== null) closes.push({ date: c.date, close: c.close });
+  }
+
+  const quarterlyTrailing = buildQuarterlyTrailingBasis(quarterlyPoints);
+
+  const buckets = new Map<string, { kind: "quarter" | "year"; point: RawPeriodPoint }>();
+  for (const point of quarterlyPoints) {
+    buckets.set(periodKeyForDate(point.date, "quarter"), { kind: "quarter", point });
+  }
+  for (const point of annualPoints) {
+    buckets.set(periodKeyForDate(point.date, "year"), { kind: "year", point });
+  }
+
+  const out: CompPeriodFinancials[] = [];
+  for (const [periodKey, { kind, point }] of buckets) {
+    const price = closestCloseOnOrBefore(closes, point.date);
+    const marketCap = price !== null && point.shares !== null ? price * point.shares : null;
+    const enterpriseValue =
+      marketCap !== null && point.totalDebt !== null && point.cash !== null
+        ? marketCap + point.totalDebt - point.cash
+        : null;
+    const profitMargins = point.netIncome !== null && point.revenue ? point.netIncome / point.revenue : null;
+    const operatingMargins =
+      point.operatingIncome !== null && point.revenue ? point.operatingIncome / point.revenue : null;
+    const currentRatio =
+      point.currentAssets !== null && point.currentLiabilities
+        ? point.currentAssets / point.currentLiabilities
+        : null;
+    const debtToEquity = point.totalDebt !== null && point.equity ? point.totalDebt / point.equity : null;
+    const bookValue = point.equity !== null && point.shares ? point.equity / point.shares : null;
+    const priceToBook = price !== null && bookValue ? price / bookValue : null;
+    const revenuePerShare = point.revenue !== null && point.shares ? point.revenue / point.shares : null;
+    const totalCashPerShare = point.cash !== null && point.shares ? point.cash / point.shares : null;
+
+    const trailingBasis: TrailingBasis =
+      kind === "year"
+        ? { revenue: point.revenue, netIncome: point.netIncome, ebitda: point.ebitda, eps: point.eps }
+        : (quarterlyTrailing.get(periodKey) ?? { revenue: null, netIncome: null, ebitda: null, eps: null });
+
+    out.push({
+      periodKey,
+      price,
+      marketCap,
+      totalRevenue: point.revenue,
+      netIncomeToCommon: point.netIncome,
+      ebitda: point.ebitda,
+      trailingEps: point.eps,
+      profitMargins,
+      operatingMargins,
+      currentRatio,
+      debtToEquity,
+      totalCash: point.cash,
+      totalCashPerShare,
+      totalDebt: point.totalDebt,
+      bookValue,
+      priceToBook,
+      revenuePerShare,
+      enterpriseValue,
+      trailingPE: price !== null && trailingBasis.eps ? price / trailingBasis.eps : null,
+      priceToSalesTrailing12Months:
+        marketCap !== null && trailingBasis.revenue ? marketCap / trailingBasis.revenue : null,
+      enterpriseToRevenue:
+        enterpriseValue !== null && trailingBasis.revenue ? enterpriseValue / trailingBasis.revenue : null,
+      enterpriseToEbitda:
+        enterpriseValue !== null && trailingBasis.ebitda ? enterpriseValue / trailingBasis.ebitda : null,
+      returnOnAssets:
+        trailingBasis.netIncome !== null && point.totalAssets
+          ? trailingBasis.netIncome / point.totalAssets
+          : null,
+      returnOnEquity:
+        trailingBasis.netIncome !== null && point.equity ? trailingBasis.netIncome / point.equity : null,
+    });
+  }
+
+  return out;
 }
 
 export async function getQuote(symbol: string): Promise<Quote | null> {

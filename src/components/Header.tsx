@@ -135,6 +135,7 @@ export default function Header() {
     status === "authenticated"
       ? [
           { href: "/markets", label: "Markets" },
+          { href: "/comp-sheet", label: "Comp Sheet" },
           ...(canSeeYahooRatings ? [{ href: "/yahoo-ratings", label: "Yahoo Ratings" }] : []),
           { href: "/news-aggregator", label: "News Aggregator" },
           { href: "/calendar", label: "Calendar" },
