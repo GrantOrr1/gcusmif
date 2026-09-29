@@ -860,6 +860,21 @@ export async function getQuote(symbol: string): Promise<Quote | null> {
   };
 }
 
+/**
+ * USD value of one unit of `currencyCode` (e.g. ~0.0064 for JPY) — multiply a
+ * dollar-shaped figure quoted in that currency by this to get its USD
+ * equivalent. Returns 1 for USD (a no-op) or if the FX rate can't be fetched.
+ */
+export async function getFxRateToUsd(currencyCode: string): Promise<number> {
+  const code = currencyCode.trim().toUpperCase();
+  if (!code || code === "USD") return 1;
+  const closes = await getHistoricalCloses(`${code}USD=X`, "5d").catch(() => []);
+  for (let i = closes.length - 1; i >= 0; i--) {
+    if (closes[i].close !== null) return closes[i].close as number;
+  }
+  return 1;
+}
+
 // Our fund's sector codes don't map one-to-one onto Yahoo's own sector
 // taxonomy, so each is expressed as one or more Yahoo sector values to
 // query for. "AGN" (Industry Agnostic) has no Yahoo sector equivalent and
