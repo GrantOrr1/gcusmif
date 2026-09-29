@@ -95,7 +95,8 @@ export default function Header() {
   }
 
   const me = status === "authenticated" ? TEAM.find((m) => isSamePerson(session?.user?.name, m)) : undefined;
-  const canSeeManagerTabs = !!me && (hasPortfolioManagerAccess(me) || me.role.includes("Sector Head"));
+  const isPortfolioManager = !!me && hasPortfolioManagerAccess(me);
+  const canSeeManagerTabs = !!me && (isPortfolioManager || me.role.includes("Sector Head"));
   // Excludes any plain-analyst tier (e.g. "Analyst", "Mentee Analyst") but not
   // "Senior Analyst", matching the gate on the Yahoo Ratings page itself.
   const canSeeYahooRatings = !!me && !(me.role.includes("Analyst") && !me.role.includes("Senior"));
@@ -140,6 +141,12 @@ export default function Header() {
           { href: "/news-aggregator", label: "News Aggregator" },
           { href: "/calendar", label: "Calendar" },
           ...(canSeeManagerTabs ? [{ href: "/attendance", label: "Attendance" }] : []),
+          ...(isPortfolioManager
+            ? [
+                { href: "/adjust-holdings", label: "Adjust Holding Positions" },
+                { href: "/port-test", label: "Port Test" },
+              ]
+            : []),
         ]
       : [];
 
@@ -159,7 +166,7 @@ export default function Header() {
           </span>
           <span className="hidden sm:inline">SMIF</span>
           <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted">
-            Beta 2.6
+            Beta 2.7
           </span>
         </Link>
 

@@ -27,6 +27,7 @@ export default function PerformanceChart({
   initialData,
   sectorOrder = [],
   ytdOverride,
+  fetchUrl = "/api/portfolio/performance",
 }: {
   initialRange: RangeKey;
   initialData: PerformanceSeries;
@@ -38,6 +39,8 @@ export default function PerformanceChart({
    * every other range still shows the chart's own computed return, since
    * there's no other official figure to compare it against. */
   ytdOverride?: number | null;
+  /** Override the range-switch endpoint — used by the ledger-based "Port Test" preview. */
+  fetchUrl?: string;
 }) {
   const [range, setRange] = useState<RangeKey>(initialRange);
   const [data, setData] = useState<PerformanceSeries>(initialData);
@@ -56,7 +59,7 @@ export default function PerformanceChart({
     }
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/portfolio/performance?range=${range}`)
+    fetch(`${fetchUrl}?range=${range}`)
       .then((res) => res.json())
       .then((json: PerformanceSeries) => {
         if (cancelled) return;
@@ -69,7 +72,7 @@ export default function PerformanceChart({
     return () => {
       cancelled = true;
     };
-  }, [range]);
+  }, [range, fetchUrl]);
 
   function toggleSector(sector: string) {
     setActiveSectors((prev) => {

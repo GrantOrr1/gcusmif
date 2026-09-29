@@ -40,6 +40,7 @@ export default function SectorPieChart({
   data,
   variant = "sector",
   unitLabel = "of portfolio",
+  basePath = "/portfolio",
 }: {
   /** `sector` is the slice's identifier — a sector code by default, or a
    * ticker when variant="ticker". A string prop (not a function) so this
@@ -47,12 +48,14 @@ export default function SectorPieChart({
   data: Slice[];
   variant?: "sector" | "ticker";
   unitLabel?: string;
+  /** Where a sector slice navigates to — used by the ledger-based "Port Test" preview. */
+  basePath?: string;
 }) {
   const colorFor = variant === "ticker" ? hashColor : colorForSector;
   const hrefFor = (code: string): string | null => {
     if (variant === "ticker") return `/equity/${code}`;
     const info = sectorByCode(code);
-    return info ? `/portfolio/${info.slug}` : null;
+    return info ? `${basePath}/${info.slug}` : null;
   };
   const router = useRouter();
   const [hovered, setHovered] = useState<{ sector: string; value: number } | null>(null);

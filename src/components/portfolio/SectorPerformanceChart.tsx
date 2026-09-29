@@ -31,6 +31,7 @@ export default function SectorPerformanceChart({
   initialRange,
   initialData,
   ytdOverride,
+  fetchUrl = "/api/portfolio/performance",
 }: {
   sectorCode: string;
   sectorLabel: string;
@@ -41,6 +42,8 @@ export default function SectorPerformanceChart({
    * shown instead of the chart's simulated return while the YTD range is
    * selected — see the same prop on PerformanceChart for the full reasoning. */
   ytdOverride?: number | null;
+  /** Override the range-switch endpoint — used by the ledger-based "Port Test" preview. */
+  fetchUrl?: string;
 }) {
   const [range, setRange] = useState<RangeKey>(initialRange);
   const [data, setData] = useState<PerformanceSeries>(initialData);
@@ -59,7 +62,7 @@ export default function SectorPerformanceChart({
     }
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/portfolio/performance?range=${range}`)
+    fetch(`${fetchUrl}?range=${range}`)
       .then((res) => res.json())
       .then((json: PerformanceSeries) => {
         if (cancelled) return;
@@ -72,7 +75,7 @@ export default function SectorPerformanceChart({
     return () => {
       cancelled = true;
     };
-  }, [range]);
+  }, [range, fetchUrl]);
 
   function toggleEquity(ticker: string) {
     setActiveEquities((prev) => {

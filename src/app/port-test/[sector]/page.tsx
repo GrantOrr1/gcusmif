@@ -1,0 +1,219 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { auth } from "@/auth";
+import { sectorBySlug, SECTOR_INFO } from "@/lib/sectors";
+import { getLedgerPortfolioData } from "@/lib/ledgerPortfolio";
+import { getLedgerPortfolioPerformance } from "@/lib/ledgerPerformance";
+import { listAllTrades } from "@/lib/tradeLedger";
+import { dailyReturnFor, weeklyReturnFor } from "@/lib/performance";
+import { formatCurrency, formatPercent } from "@/lib/format";
+import { TEAM } from "@/data/team";
+import { isSamePerson, hasPortfolioManagerAccess, slugifyName } from "@/lib/team";
+import { getSectorIndustryNews } from "@/lib/industryNews";
+import KpiCard from "@/components/portfolio/KpiCard";
+import TradesTable from "@/components/holdings/TradesTable";
+import SoldHoldingsTable from "@/components/portfolio/SoldHoldingsTable";
+import SectorPerformanceChart from "@/components/portfolio/SectorPerformanceChart";
+import IndustryNews from "@/components/portfolio/IndustryNews";
+import Avatar from "@/components/team/Avatar";
+import TopMovers from "@/components/portfolio/TopMovers";
+import HoldingsPerformancePanel from "@/components/portfolio/HoldingsPerformancePanel";
+import SectorPieChart from "@/components/portfolio/SectorPieChart";
+
+export default async function PortTestSectorPage({ params }: PageProps<"/port-test/[sector]">) {
+  const session = await auth();
+  const me = TEAM.find((m) => isSamePerson(session?.user?.name, m));
+
+  if (!me || !hasPortfolioManagerAccess(me)) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+        <h1 className="text-3xl font-bold text-foreground">Port Test</h1>
+        <p className="mt-4 text-sm text-muted">
+          This page is only available to the Portfolio Manager.
+        </p>
+      </div>
+    );
+  }
+
+  const { sector: slug } = await params;
+  const sectorInfo = sectorBySlug(slug);
+  if (!sectorInfo) notFound();
+
+  const sectorHead = TEAM.find(
+    (m) => m.role.includes("Sector Head") && m.sector === sectorInfo.label
+  );
+
+  const data = await getLedgerPortfolioData();
+  const holdings = data.holdings.filter((h) => h.sector === sectorInfo.code || h.sector === sectorInfo.label);
+  const soldHoldings = data.soldHoldings.filter(
+    (h) => h.sector === sectorInfo.code || h.sector === sectorInfo.label
+  );
+  const trades = listAllTrades().filter(
+    (t) => t.sector === sectorInfo.code || t.sector === sectorInfo.label
+  );
+
+  const totalValue = holdings.reduce((sum, h) => sum + (h.totalValue ?? 0), 0);
+  const totalCost = holdings.reduce((sum, h) => sum + (h.totalValuePaid ?? 0), 0);
+  const totalReturn = totalCost > 0 ? totalValue / totalCost - 1 : null;
+
+  const [ytdSeries, fiveDaySeries, industryNews] = await Promise.all([
+    getLedgerPortfolioPerformance("ytd"),
+    getLedgerPortfolioPerformance("5d"),
+    getSectorIndustryNews(sectorInfo.code).catch(() => []),
+  ]);
+  const dailyReturn = dailyReturnFor(fiveDaySeries, { sector: sectorInfo.label });
+  const weeklyReturn = weeklyReturnFor(fiveDaySeries, { sector: sectorInfo.label });
+
+  const topMovers = holdings
+    .map((h) => {
+      const weeklyReturn = weeklyReturnFor(fiveDaySeries, { ticker: h.ticker });
+      const priceChange =
+        weeklyReturn !== null && h.currentPrice !== null
+          ? h.currentPrice - h.currentPrice / (1 + weeklyReturn)
+          : null;
+      return {
+        ticker: h.ticker,
+        companyName: h.companyName,
+        weeklyReturn,
+        priceChange,
+      };
+    })
+    .filter(
+      (
+        m
+      ): m is {
+        ticker: string;
+        companyName: string | null;
+        weeklyReturn: number;
+        priceChange: number | null;
+      } => m.weeklyReturn !== null
+    )
+    .sort((a, b) => Math.abs(b.weeklyReturn) - Math.abs(a.weeklyReturn))
+    .slice(0, 5);
+
+  const holdingsAllocation = holdings
+    .filter((h) => h.totalValue !== null && h.totalValue > 0)
+    .map((h) => ({ sector: h.ticker, value: (h.totalValue ?? 0) / (totalValue || 1) }));
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <div className="mb-8">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-bold text-foreground">Port Test — {sectorInfo.label}</h1>
+          <div className="flex flex-wrap gap-1.5">
+            <Link
+              href="/port-test"
+              className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted hover:border-brand hover:text-foreground"
+            >
+              Overview
+            </Link>
+            {SECTOR_INFO.filter((s) => s.slug !== sectorInfo.slug && s.code !== "AGN").map((s) => (
+              <Link
+                key={s.slug}
+                href={`/port-test/${s.slug}`}
+                className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted hover:border-brand hover:text-foreground"
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <p className="mt-1 text-sm text-muted">
+          {holdings.length} holding{holdings.length === 1 ? "" : "s"} logged for this sector
+        </p>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
+        <div>
+          <SectorPerformanceChart
+            sectorCode={sectorInfo.label}
+            sectorLabel={sectorInfo.label}
+            equities={holdings.map((h) => ({ ticker: h.ticker, companyName: h.companyName }))}
+            initialRange="ytd"
+            initialData={ytdSeries}
+            fetchUrl="/api/port-test/performance"
+          />
+        </div>
+
+        <div className="flex flex-col">
+          {sectorHead && (
+            <Link
+              href={`/team/${slugifyName(sectorHead.name)}`}
+              className="mb-4 flex items-center gap-3 rounded-lg border border-border bg-surface p-3 hover:border-brand"
+            >
+              <Avatar name={sectorHead.name} photoUrl={sectorHead.photoUrl} size={48} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {sectorHead.name}
+                </p>
+                <p className="truncate text-xs text-muted">{sectorHead.role}</p>
+              </div>
+            </Link>
+          )}
+
+          <div className="flex flex-1 flex-col justify-between gap-2">
+            <KpiCard compact evenHeight={false} label="Sector Value" value={formatCurrency(totalValue)} />
+            <KpiCard
+              compact
+              evenHeight={false}
+              label="Sector Return"
+              value={formatPercent(totalReturn)}
+              tone={totalReturn === null ? "neutral" : totalReturn >= 0 ? "positive" : "negative"}
+            />
+            <KpiCard
+              compact
+              evenHeight={false}
+              label="Daily Return"
+              value={formatPercent(dailyReturn)}
+              tone={dailyReturn === null ? "neutral" : dailyReturn >= 0 ? "positive" : "negative"}
+            />
+            <KpiCard
+              compact
+              evenHeight={false}
+              label="Weekly Return"
+              value={formatPercent(weeklyReturn)}
+              tone={
+                weeklyReturn === null ? "neutral" : weeklyReturn >= 0 ? "positive" : "negative"
+              }
+            />
+            <KpiCard compact evenHeight={false} label="Holdings" value={holdings.length.toString()} />
+            <KpiCard compact evenHeight={false} label="Cost Basis" value={formatCurrency(totalCost)} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col">
+          <h2 className="mb-3 text-lg font-semibold text-foreground">Top Weekly Movers</h2>
+          <div className="flex-1 rounded-lg border border-border bg-surface p-4">
+            <TopMovers movers={topMovers} />
+          </div>
+        </div>
+
+        <div className="flex flex-col">
+          <h2 className="mb-3 text-lg font-semibold text-foreground">Holdings Performance</h2>
+          <div className="flex flex-1 flex-col rounded-lg border border-border bg-surface p-4">
+            <HoldingsPerformancePanel data={ytdSeries} tickers={holdings.map((h) => h.ticker)} />
+          </div>
+        </div>
+
+        <div className="flex flex-col">
+          <h2 className="mb-3 text-lg font-semibold text-foreground">Holdings Allocation</h2>
+          <div className="flex flex-1 items-center rounded-lg border border-border bg-surface p-4">
+            <SectorPieChart data={holdingsAllocation} variant="ticker" unitLabel="of sector" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-10">
+        <TradesTable trades={trades} title="Trades" />
+      </div>
+
+      <div className="mt-10">
+        <SoldHoldingsTable soldHoldings={soldHoldings} />
+      </div>
+
+      <IndustryNews title="Industry News" items={industryNews} />
+    </div>
+  );
+}

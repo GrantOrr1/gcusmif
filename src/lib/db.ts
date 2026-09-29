@@ -171,6 +171,19 @@ if (!isBuildPhase) {
       reviewed_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS trade_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ticker TEXT NOT NULL,
+      company_name TEXT,
+      sector TEXT NOT NULL,
+      side TEXT NOT NULL,
+      quantity REAL NOT NULL,
+      price REAL NOT NULL,
+      traded_at TEXT NOT NULL,
+      entered_by TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   const reportUploadColumns = (db.prepare("PRAGMA table_info(report_uploads)").all() as { name: string }[]).map(

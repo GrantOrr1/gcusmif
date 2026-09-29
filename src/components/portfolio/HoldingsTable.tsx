@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Holding } from "@/lib/portfolio";
 import { formatPercent, formatPrice, formatCurrency } from "@/lib/format";
+import TradeHistoryPanel from "@/components/portfolio/TradeHistoryPanel";
 
 type Row = Holding & {
   ytdReturn: number | null;
@@ -53,6 +54,17 @@ export default function HoldingsTable({
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("totalValue");
   const [sortDir, setSortDir] = useState<1 | -1>(-1);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  function toggleExpanded(ticker: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(ticker)) next.delete(ticker);
+      else next.add(ticker);
+      return next;
+    });
+  }
 
   const rows: Row[] = useMemo(
     () =>
@@ -117,7 +129,7 @@ export default function HoldingsTable({
         />
       </div>
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[1040px] text-sm">
+        <table className="w-full min-w-[1080px] text-sm">
           <thead>
             <tr className="border-b border-border bg-background">
               {COLUMNS.map((col) => (
@@ -132,70 +144,89 @@ export default function HoldingsTable({
                   {sortKey === col.key ? (sortDir === 1 ? " ▲" : " ▼") : ""}
                 </th>
               ))}
+              <th className="w-10 px-3 py-2" />
             </tr>
           </thead>
           <tbody>
             {sorted.map((h) => {
+              const isExpanded = expanded.has(h.ticker);
               return (
-                <tr
-                  key={h.ticker}
-                  onClick={() => router.push(`/equity/${h.ticker}`)}
-                  className="group cursor-pointer border-b border-border last:border-0 hover:bg-background"
-                >
-                  <td className="px-3 py-2 font-semibold text-foreground group-hover:text-brand group-hover:underline">
-                    {h.ticker}
-                  </td>
-                  <td className="px-3 py-2 text-muted group-hover:text-foreground">
-                    {h.companyName ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-muted">{h.sector ?? "—"}</td>
-                  <td className="px-3 py-2 text-right text-foreground group-hover:text-brand">
-                    {formatPrice(h.pricePaid)}
-                  </td>
-                  <td className="px-3 py-2 text-right text-foreground group-hover:text-brand">
-                    {formatPrice(h.currentPrice)}
-                  </td>
-                  <td
-                    className={`px-3 py-2 text-right font-medium group-hover:text-brand ${
-                      h.ytdReturn === null
-                        ? "text-muted"
-                        : h.ytdReturn >= 0
-                          ? "text-positive"
-                          : "text-negative"
-                    }`}
+                <Fragment key={h.ticker}>
+                  <tr
+                    onClick={() => router.push(`/equity/${h.ticker}`)}
+                    className="group cursor-pointer border-b border-border last:border-0 hover:bg-background"
                   >
-                    {formatPercent(h.ytdReturn)}
-                  </td>
-                  <td
-                    className={`px-3 py-2 text-right font-medium group-hover:text-brand ${
-                      (h.percentChange ?? 0) >= 0 ? "text-positive" : "text-negative"
-                    }`}
-                  >
-                    {formatPercent(h.percentChange)}
-                  </td>
-                  <td
-                    className={`px-3 py-2 text-right font-medium group-hover:text-brand ${
-                      h.gainDollars === null
-                        ? "text-muted"
-                        : h.gainDollars >= 0
-                          ? "text-positive"
-                          : "text-negative"
-                    }`}
-                  >
-                    {formatCurrency(h.gainDollars)}
-                  </td>
-                  <td className="px-3 py-2 text-right text-foreground group-hover:text-brand">
-                    {formatCurrency(h.totalValue)}
-                  </td>
-                  <td className="px-3 py-2 text-right text-foreground group-hover:text-brand">
-                    {formatPercent(h.weight)}
-                  </td>
-                </tr>
+                    <td className="px-3 py-2 font-semibold text-foreground group-hover:text-brand group-hover:underline">
+                      {h.ticker}
+                    </td>
+                    <td className="px-3 py-2 text-muted group-hover:text-foreground">
+                      {h.companyName ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-muted">{h.sector ?? "—"}</td>
+                    <td className="px-3 py-2 text-right text-foreground group-hover:text-brand">
+                      {formatPrice(h.pricePaid)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-foreground group-hover:text-brand">
+                      {formatPrice(h.currentPrice)}
+                    </td>
+                    <td
+                      className={`px-3 py-2 text-right font-medium group-hover:text-brand ${
+                        h.ytdReturn === null
+                          ? "text-muted"
+                          : h.ytdReturn >= 0
+                            ? "text-positive"
+                            : "text-negative"
+                      }`}
+                    >
+                      {formatPercent(h.ytdReturn)}
+                    </td>
+                    <td
+                      className={`px-3 py-2 text-right font-medium group-hover:text-brand ${
+                        (h.percentChange ?? 0) >= 0 ? "text-positive" : "text-negative"
+                      }`}
+                    >
+                      {formatPercent(h.percentChange)}
+                    </td>
+                    <td
+                      className={`px-3 py-2 text-right font-medium group-hover:text-brand ${
+                        h.gainDollars === null
+                          ? "text-muted"
+                          : h.gainDollars >= 0
+                            ? "text-positive"
+                            : "text-negative"
+                      }`}
+                    >
+                      {formatCurrency(h.gainDollars)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-foreground group-hover:text-brand">
+                      {formatCurrency(h.totalValue)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-foreground group-hover:text-brand">
+                      {formatPercent(h.weight)}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        onClick={(e) => toggleExpanded(h.ticker, e)}
+                        aria-label={isExpanded ? "Hide trade history" : "Show trade history"}
+                        className="text-muted hover:text-foreground"
+                      >
+                        {isExpanded ? "▾" : "▸"}
+                      </button>
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr className="border-b border-border bg-background/60 last:border-0">
+                      <td colSpan={COLUMNS.length + 1}>
+                        <TradeHistoryPanel ticker={h.ticker} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               );
             })}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={COLUMNS.length} className="px-3 py-6 text-center text-muted">
+                <td colSpan={COLUMNS.length + 1} className="px-3 py-6 text-center text-muted">
                   {query.trim()
                     ? "No holdings match your search."
                     : "No holdings found. Check the portfolio spreadsheet formatting."}
