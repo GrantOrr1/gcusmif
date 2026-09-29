@@ -120,7 +120,7 @@ export default function AttendanceBoard({
       const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, records }),
+        body: JSON.stringify({ date, sector, records }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);

@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
-import { isSamePerson, sectorHeads, hasPortfolioManagerAccess } from "@/lib/team";
+import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
+import { SECTOR_INFO } from "@/lib/sectors";
 import AttendanceBoard from "@/components/attendance/AttendanceBoard";
 
 export const metadata = {
@@ -26,9 +27,7 @@ export default async function AttendancePage() {
   }
 
   const sectors = isPortfolioManager
-    ? sectorHeads()
-        .map((h) => h.sector)
-        .filter((s): s is string => !!s)
+    ? SECTOR_INFO.map((s) => s.label).filter((label) => TEAM.some((m) => m.sector === label))
     : [me.sector!];
 
   const sectorRosters = sectors.map((sector) => ({
@@ -40,13 +39,13 @@ export default async function AttendancePage() {
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <h1 className="text-3xl font-bold text-foreground">Attendance</h1>
       <p className="mt-2 text-sm text-muted">
-        {isPortfolioManager
-          ? "Read-only view of attendance marked by each Sector Head, for our Monday and Saturday meetings."
-          : "Mark attendance for your sector's Monday and Saturday meetings."}
+        {isSectorHead
+          ? "Mark attendance for your sector's Monday and Saturday meetings."
+          : "Mark attendance for any sector's Monday and Saturday meetings."}
       </p>
 
       <AttendanceBoard
-        canEdit={isSectorHead}
+        canEdit={isSectorHead || isPortfolioManager}
         sectorRosters={sectorRosters}
         defaultSector={sectors[0] ?? ""}
       />

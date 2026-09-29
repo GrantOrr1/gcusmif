@@ -42,18 +42,19 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await auth();
   const roleInfo = getRole(session?.user?.name);
-  if (!roleInfo || !roleInfo.isSectorHead) {
-    return NextResponse.json({ error: "Only Sector Heads can mark attendance" }, { status: 403 });
-  }
-
-  const sector = roleInfo.me.sector;
-  if (!sector) {
-    return NextResponse.json({ error: "Your account has no sector assigned" }, { status: 400 });
+  if (!roleInfo || !(roleInfo.isSectorHead || roleInfo.isPortfolioManager)) {
+    return NextResponse.json({ error: "Only Sector Heads and the Portfolio Manager can mark attendance" }, { status: 403 });
   }
 
   const body = await req.json().catch(() => null);
   const date = typeof body?.date === "string" ? body.date : "";
   const records = Array.isArray(body?.records) ? body.records : null;
+  const sectorParam = typeof body?.sector === "string" ? body.sector : "";
+  const sector = roleInfo.isSectorHead ? roleInfo.me.sector : sectorParam;
+
+  if (!sector) {
+    return NextResponse.json({ error: "sector is required" }, { status: 400 });
+  }
 
   if (!isValidAttendanceDate(date)) {
     return NextResponse.json({ error: "Attendance is only tracked for Mondays and Saturdays" }, { status: 400 });
