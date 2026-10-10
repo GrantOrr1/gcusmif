@@ -3,21 +3,28 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const DOC_ACCEPT =
-  ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const POWERPOINT_ACCEPT =
+  ".pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint";
 
-const REPORT_TYPE_OPTIONS: { value: string; label: string; accept: string }[] = [
-  { value: "equity_report", label: "Equity Report", accept: DOC_ACCEPT },
+const DOC_ACCEPT =
+  ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document," +
+  POWERPOINT_ACCEPT;
+
+const REPORT_TYPE_OPTIONS: { value: string; label: string; accept: string; fileHint: string }[] = [
+  { value: "equity_report", label: "Equity Report", accept: DOC_ACCEPT, fileHint: "PDF, Word, or PowerPoint" },
   {
     value: "coverage_watchlist_report",
     label: "Coverage Report",
     accept: DOC_ACCEPT,
+    fileHint: "PDF, Word, or PowerPoint",
   },
   {
     value: "financial_model",
     label: "Financial Model",
     accept: ".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel",
+    fileHint: "Excel only",
   },
+  { value: "pitch_deck", label: "Pitch Deck", accept: POWERPOINT_ACCEPT, fileHint: "PowerPoint only" },
 ];
 
 type SearchResult = { symbol: string; name: string };
@@ -178,8 +185,11 @@ export default function UploadReportForm({ teamMembers = [] }: { teamMembers?: T
 
         <div>
           <label className="text-xs font-medium uppercase tracking-wide text-muted">
-            Title (optional)
+            Title
           </label>
+          <p className="text-xs text-muted">
+            Only input a title if it is a speciality report and not a normal report for coverage/holdings
+          </p>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -217,7 +227,7 @@ export default function UploadReportForm({ teamMembers = [] }: { teamMembers?: T
 
         <div>
           <label className="text-xs font-medium uppercase tracking-wide text-muted">
-            File ({selectedType.value === "financial_model" ? "Excel only" : "PDF or Word"})
+            File ({selectedType.fileHint})
           </label>
           <input
             key={reportType}

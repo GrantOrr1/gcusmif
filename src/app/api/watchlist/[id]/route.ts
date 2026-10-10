@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
 import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
-import { getWatchlistItem, updateWatchlistRating } from "@/lib/watchlistStore";
+import { getWatchlistItem, updateWatchlistRating, deleteWatchlistItem } from "@/lib/watchlistStore";
 import { upsertPendingSubmission } from "@/lib/ratingSubmissions";
 import { RATINGS, type Rating } from "@/lib/ratings";
 
@@ -76,4 +76,40 @@ export async function PATCH(
     submittedBy: me.name,
   });
   return NextResponse.json({ status: "pending", submission });
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const me = TEAM.find((m) => isSamePerson(session.user?.name, m));
+  if (!me) {
+    return NextResponse.json({ error: "No matching team profile" }, { status: 403 });
+  }
+
+  const { id: rawId } = await params;
+  const id = Number(rawId);
+  const item = getWatchlistItem(id);
+  if (!item) {
+    return NextResponse.json({ error: "Coverage item not found" }, { status: 404 });
+  }
+
+  const isPortfolioManager = hasPortfolioManagerAccess(me);
+  const isSectorHead = me.role.includes("Sector Head");
+  const canEnd =
+    isPortfolioManager || (isSectorHead && item.sector === me.sector) || item.addedBy === me.name;
+  if (!canEnd) {
+    return NextResponse.json(
+      { error: "Only the Portfolio Manager, the Sector Head, or whoever added it can end coverage" },
+      { status: 403 }
+    );
+  }
+
+  deleteWatchlistItem(id);
+  return NextResponse.json({ ok: true });
 }

@@ -58,12 +58,14 @@ function ItemCard({
   onRate,
   showStep,
   onStep,
+  onEndCoverage,
 }: {
   item: ItemWithQuote;
   canRate: boolean;
   onRate: () => void;
   showStep: boolean;
   onStep: () => void;
+  onEndCoverage?: () => void;
 }) {
   const quote = item.quote;
   const up = (quote?.change ?? 0) >= 0;
@@ -91,7 +93,7 @@ function ItemCard({
       <div className="mt-2 min-h-[18px]">
         <AssigneeList names={item.assignedTo} />
       </div>
-      <div className="mt-auto flex items-center gap-1.5 pt-3">
+      <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-3">
         {canRate && <RatingButton item={item} onClick={onRate} />}
         {showStep && (
           <button
@@ -99,6 +101,14 @@ function ItemCard({
             className="shrink-0 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted hover:border-brand hover:text-foreground"
           >
             Steps
+          </button>
+        )}
+        {onEndCoverage && (
+          <button
+            onClick={onEndCoverage}
+            className="shrink-0 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted hover:border-negative hover:text-negative"
+          >
+            End Coverage
           </button>
         )}
       </div>
@@ -114,12 +124,14 @@ function ItemRow({
   onRate,
   showStep,
   onStep,
+  onEndCoverage,
 }: {
   item: ItemWithQuote;
   canRate: boolean;
   onRate: () => void;
   showStep: boolean;
   onStep: () => void;
+  onEndCoverage?: () => void;
 }) {
   const quote = item.quote;
   const up = (quote?.change ?? 0) >= 0;
@@ -163,6 +175,7 @@ function ItemRow({
             ? [{ label: hasRating(item) ? "Edit Coverage Rating" : "Add Coverage Rating", onClick: onRate }]
             : []),
           ...(showStep ? [{ label: "Steps", onClick: onStep }] : []),
+          ...(onEndCoverage ? [{ label: "End Coverage", onClick: onEndCoverage }] : []),
         ]}
       />
     </div>
@@ -221,6 +234,9 @@ export default function WatchlistItems({
   const [view, setView] = useState<"grid" | "list">("grid");
   const [ratingItem, setRatingItem] = useState<ItemWithQuote | null>(null);
   const [stepsItem, setStepsItem] = useState<ItemWithQuote | null>(null);
+  const [endingItem, setEndingItem] = useState<ItemWithQuote | null>(null);
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState<string | null>(null);
 
   function canRate(): boolean {
     return !!myName;
@@ -236,6 +252,41 @@ export default function WatchlistItems({
       (isSectorHead && item.sector === mySector) ||
       (!!myName && item.assignedTo.includes(myName))
     );
+  }
+
+  function canEndCoverage(item: ItemWithQuote): boolean {
+    return (
+      isPortfolioManager ||
+      (isSectorHead && item.sector === mySector) ||
+      (!!myName && item.addedBy === myName)
+    );
+  }
+
+  function endCoverageHandler(item: ItemWithQuote): (() => void) | undefined {
+    if (!canEndCoverage(item)) return undefined;
+    return () => {
+      setEndError(null);
+      setEndingItem(item);
+    };
+  }
+
+  async function confirmEndCoverage() {
+    if (!endingItem) return;
+    setEnding(true);
+    setEndError(null);
+    try {
+      const res = await fetch(`/api/watchlist/${endingItem.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        setEndError(json?.error ?? "Could not end coverage.");
+        return;
+      }
+      setEndingItem(null);
+      window.dispatchEvent(new Event("ratings-pending-changed"));
+      router.refresh();
+    } finally {
+      setEnding(false);
+    }
   }
 
   async function saveRating(
@@ -316,6 +367,7 @@ export default function WatchlistItems({
               onRate={() => setRatingItem(item)}
               showStep={!!myName}
               onStep={() => setStepsItem(item)}
+              onEndCoverage={endCoverageHandler(item)}
             />
           ))}
         </div>
@@ -329,6 +381,7 @@ export default function WatchlistItems({
               onRate={() => setRatingItem(item)}
               showStep={!!myName}
               onStep={() => setStepsItem(item)}
+              onEndCoverage={endCoverageHandler(item)}
             />
           ))}
         </div>
@@ -356,6 +409,37 @@ export default function WatchlistItems({
           canAdd={canAddStep(stepsItem)}
           onClose={() => setStepsItem(null)}
         />
+      )}
+
+      {endingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 text-center shadow-xl">
+            <h2 className="text-lg font-bold text-foreground">
+              Are you sure you want to end coverage of {endingItem.ticker}?
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              This removes it from the coverage list, along with its rating and analyst assignments.
+              This cannot be undone.
+            </p>
+            {endError && <p className="mt-3 text-xs text-negative">{endError}</p>}
+            <div className="mt-6 flex gap-2">
+              <button
+                onClick={confirmEndCoverage}
+                disabled={ending}
+                className="flex-1 rounded-md bg-negative px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {ending ? "Ending…" : "End Coverage"}
+              </button>
+              <button
+                onClick={() => setEndingItem(null)}
+                disabled={ending}
+                className="flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

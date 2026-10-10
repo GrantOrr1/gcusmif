@@ -83,6 +83,21 @@ export function updateWatchlistRating(
   return getWatchlistItem(id);
 }
 
+/** Removes an equity from coverage, along with any of its still-pending rating submissions. */
+export function deleteWatchlistItem(id: number): void {
+  db.exec("BEGIN");
+  try {
+    db.prepare(
+      "DELETE FROM rating_submissions WHERE target_type = 'watchlist' AND target_id = ? AND status = 'pending'"
+    ).run(String(id));
+    db.prepare("DELETE FROM watchlist_items WHERE id = ?").run(id);
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+}
+
 export function listTickersAssignedTo(name: string): string[] {
   const rows = db.prepare("SELECT DISTINCT ticker, assigned_to FROM watchlist_items").all() as {
     ticker: string;

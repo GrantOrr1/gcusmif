@@ -25,12 +25,7 @@ import { slugifyName } from "@/lib/team";
 import Avatar from "@/components/team/Avatar";
 import AssigneeList from "@/components/team/AssigneeList";
 import ReportsHeightSync from "@/components/equity/ReportsHeightSync";
-
-const TYPE_LABELS: Record<string, string> = {
-  equity_report: "Equity Report",
-  coverage_watchlist_report: "Coverage Report",
-  financial_model: "Financial Model",
-};
+import { REPORT_TYPE_LABELS, opensInBrowser } from "@/lib/reportTypes";
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
@@ -389,8 +384,8 @@ export default async function EquityPage({ params }: PageProps<"/equity/[ticker]
                           >
                             <p className="truncate text-sm font-medium text-foreground">{report.title}</p>
                             <p className="text-xs text-muted">
-                              {TYPE_LABELS[report.reportType] ?? report.reportType} ·{" "}
-                              {report.reportType === "financial_model" ? "Download" : "View"}
+                              {REPORT_TYPE_LABELS[report.reportType] ?? report.reportType} ·{" "}
+                              {opensInBrowser(report.fileName) ? "View" : "Download"}
                             </p>
                           </a>
                           <div className="flex shrink-0 flex-col items-end gap-0.5">

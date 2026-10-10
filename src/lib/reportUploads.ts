@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import db from "./db";
 
-export type ReportType = "equity_report" | "coverage_watchlist_report" | "financial_model";
+export type ReportType = "equity_report" | "coverage_watchlist_report" | "financial_model" | "pitch_deck";
 export type ReportStatus = "pending" | "approved" | "declined";
 
 export type ReportUpload = {

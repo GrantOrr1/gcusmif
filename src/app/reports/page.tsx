@@ -8,16 +8,12 @@ import UploadReportForm from "@/components/reports/UploadReportForm";
 import PendingApprovals from "@/components/reports/PendingApprovals";
 import MyPendingUploads from "@/components/reports/MyPendingUploads";
 import ReportsList from "@/components/reports/ReportsList";
+import { REPORT_TYPE_LABELS } from "@/lib/reportTypes";
 
 export const metadata = {
   title: "Reports | Student Managed Investment Fund",
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  equity_report: "Equity Report",
-  coverage_watchlist_report: "Coverage Report",
-  financial_model: "Financial Model",
-};
 
 export default async function ReportsPage() {
   const session = await auth();
@@ -43,7 +39,7 @@ export default async function ReportsPage() {
       sector: u.sector,
       title: u.title,
       date: u.reviewedAt ?? u.createdAt,
-      description: TYPE_LABELS[u.reportType] ?? u.reportType,
+      description: REPORT_TYPE_LABELS[u.reportType] ?? u.reportType,
       ticker: u.ticker ?? undefined,
       uploadedBy: u.uploadedBy,
       coAuthors: u.coAuthors,

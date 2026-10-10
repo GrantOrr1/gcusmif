@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { TEAM } from "@/data/team";
 import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
 import { getReportUpload, UPLOADS_DIR } from "@/lib/reportUploads";
+import { opensInBrowser } from "@/lib/reportTypes";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: idParam } = await params;
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const buffer = fs.readFileSync(fullPath);
-  const disposition = report.reportType === "financial_model" ? "attachment" : "inline";
+  const disposition = opensInBrowser(report.fileName) ? "inline" : "attachment";
 
   return new NextResponse(buffer, {
     headers: {

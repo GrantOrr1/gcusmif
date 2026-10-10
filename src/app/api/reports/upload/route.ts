@@ -4,7 +4,7 @@ import { TEAM } from "@/data/team";
 import { isSamePerson, hasPortfolioManagerAccess } from "@/lib/team";
 import { insertReportUpload, saveUploadedFile, type ReportType } from "@/lib/reportUploads";
 
-const REPORT_TYPES: ReportType[] = ["equity_report", "coverage_watchlist_report", "financial_model"];
+const REPORT_TYPES: ReportType[] = ["equity_report", "coverage_watchlist_report", "financial_model", "pitch_deck"];
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
@@ -20,6 +20,14 @@ function isWord(file: File) {
     file.type === "application/msword" ||
     file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   );
+}
+
+const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+const PPT_MIME = "application/vnd.ms-powerpoint";
+
+function isPowerPoint(file: File) {
+  const name = file.name.toLowerCase();
+  return name.endsWith(".pptx") || name.endsWith(".ppt") || file.type === PPTX_MIME || file.type === PPT_MIME;
 }
 
 function isExcel(file: File) {
@@ -69,9 +77,16 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-  } else if (!isPdf(file) && !isWord(file)) {
+  } else if (reportType === "pitch_deck") {
+    if (!isPowerPoint(file)) {
+      return NextResponse.json(
+        { error: "Pitch Decks must be a PowerPoint file (.pptx or .ppt)" },
+        { status: 400 }
+      );
+    }
+  } else if (!isPdf(file) && !isWord(file) && !isPowerPoint(file)) {
     return NextResponse.json(
-      { error: "Equity Reports and Coverage Reports must be a PDF or Word document" },
+      { error: "Equity Reports and Coverage Reports must be a PDF, Word, or PowerPoint file" },
       { status: 400 }
     );
   }
@@ -121,7 +136,11 @@ export async function POST(req: NextRequest) {
       file.type ||
       (reportType === "financial_model"
         ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        : file.name.toLowerCase().endsWith(".docx")
+        : file.name.toLowerCase().endsWith(".pptx")
+          ? PPTX_MIME
+          : file.name.toLowerCase().endsWith(".ppt")
+            ? PPT_MIME
+            : file.name.toLowerCase().endsWith(".docx")
           ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           : file.name.toLowerCase().endsWith(".doc")
             ? "application/msword"

@@ -14,12 +14,7 @@ import LinkedInBadge from "@/components/team/LinkedInBadge";
 import EmailBadge from "@/components/team/EmailBadge";
 import SubstackBadge from "@/components/team/SubstackBadge";
 import ProfileEditor from "@/components/team/ProfileEditor";
-
-const TYPE_LABELS: Record<string, string> = {
-  equity_report: "Equity Report",
-  coverage_watchlist_report: "Coverage Report",
-  financial_model: "Financial Model",
-};
+import { REPORT_TYPE_LABELS } from "@/lib/reportTypes";
 
 export default async function PersonPage({ params }: PageProps<"/team/[slug]">) {
   const { slug } = await params;
@@ -162,7 +157,7 @@ export default async function PersonPage({ params }: PageProps<"/team/[slug]">) 
                         <p className="truncate text-xs font-medium text-foreground">{report.title}</p>
                         <p className="text-xs text-muted">
                           {report.ticker ? `${report.ticker} · ` : ""}
-                          {TYPE_LABELS[report.reportType] ?? report.reportType}
+                          {REPORT_TYPE_LABELS[report.reportType] ?? report.reportType}
                         </p>
                       </a>
                       <div className="flex shrink-0 flex-col items-end gap-0.5">

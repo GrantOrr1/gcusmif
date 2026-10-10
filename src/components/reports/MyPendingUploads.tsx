@@ -4,12 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ReportUpload } from "@/lib/reportUploads";
-
-const TYPE_LABELS: Record<string, string> = {
-  equity_report: "Equity Report",
-  coverage_watchlist_report: "Coverage Report",
-  financial_model: "Financial Model",
-};
+import { REPORT_TYPE_LABELS, opensInBrowser } from "@/lib/reportTypes";
 
 export default function MyPendingUploads({ initialItems }: { initialItems: ReportUpload[] }) {
   const router = useRouter();
@@ -52,7 +47,7 @@ export default function MyPendingUploads({ initialItems }: { initialItems: Repor
             <div>
               <p className="font-medium text-foreground">{item.title}</p>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-                <span>{TYPE_LABELS[item.reportType] ?? item.reportType}</span>
+                <span>{REPORT_TYPE_LABELS[item.reportType] ?? item.reportType}</span>
                 {item.ticker && (
                   <>
                     <span>·</span>
@@ -74,7 +69,7 @@ export default function MyPendingUploads({ initialItems }: { initialItems: Repor
                 rel="noreferrer"
                 className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface"
               >
-                {item.reportType === "financial_model" ? "Download" : "View"}
+                {opensInBrowser(item.fileName) ? "View" : "Download"}
               </a>
               <button
                 onClick={() => cancelUpload(item.id)}
