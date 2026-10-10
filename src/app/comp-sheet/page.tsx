@@ -23,7 +23,7 @@ export default async function CompSheetPage() {
       <h1 className="text-3xl font-bold text-foreground">Comp Sheet</h1>
       <p className="mt-1 text-sm text-muted">
         Build a comparable companies table — search tickers for the rows, and valuation,
-        profitability, or liquidity metrics for the columns.
+        income statement, balance sheet, profitability, or growth metrics for the columns.
       </p>
       <div className="mt-6">
         <CompSheet />

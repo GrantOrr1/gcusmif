@@ -259,6 +259,27 @@ export type QuoteSummaryDetails = {
   netMarginRecentQuarter: number | null;
   operatingNWC: number | null;
 
+  // Balance sheet — most recent reported quarter
+  totalAssets: number | null;
+  totalLiabilities: number | null;
+  stockholdersEquity: number | null;
+  currentAssets: number | null;
+  currentLiabilities: number | null;
+  inventory: number | null;
+  accountsReceivable: number | null;
+  accountsPayable: number | null;
+  longTermDebt: number | null;
+  currentDebt: number | null;
+  retainedEarnings: number | null;
+
+  // Income statement — most recent reported quarter
+  operatingIncome: number | null;
+  costOfRevenue: number | null;
+  sellingGeneralAndAdmin: number | null;
+  researchAndDevelopment: number | null;
+  pretaxIncome: number | null;
+  taxProvision: number | null;
+
   // Earnings trends — last 4 quarters
   earningsQuarters: EarningsQuarter[];
 };
@@ -439,6 +460,21 @@ export async function getQuoteSummaryDetails(symbol: string): Promise<QuoteSumma
     "quarterlyEBITDA",
     "quarterlyOperatingIncome",
     "quarterlyWorkingCapital",
+    "quarterlyTotalAssets",
+    "quarterlyCurrentAssets",
+    "quarterlyCurrentLiabilities",
+    "quarterlyStockholdersEquity",
+    "quarterlyCostOfRevenue",
+    "quarterlySellingGeneralAndAdministration",
+    "quarterlyResearchAndDevelopment",
+    "quarterlyPretaxIncome",
+    "quarterlyTaxProvision",
+    "quarterlyInventory",
+    "quarterlyAccountsReceivable",
+    "quarterlyAccountsPayable",
+    "quarterlyLongTermDebt",
+    "quarterlyCurrentDebt",
+    "quarterlyRetainedEarnings",
   ]).catch(() => ({}) as Record<string, FundamentalsSeries>);
 
   const dilutedEps = fundamentals.quarterlyDilutedEPS ?? new Map();
@@ -448,6 +484,36 @@ export async function getQuoteSummaryDetails(symbol: string): Promise<QuoteSumma
   const quarterlyEbitda = fundamentals.quarterlyEBITDA ?? new Map();
   const operatingIncome = fundamentals.quarterlyOperatingIncome ?? new Map();
   const workingCapital = fundamentals.quarterlyWorkingCapital ?? new Map();
+  const totalAssetsSeries = fundamentals.quarterlyTotalAssets ?? new Map();
+  const currentAssetsSeries = fundamentals.quarterlyCurrentAssets ?? new Map();
+  const currentLiabilitiesSeries = fundamentals.quarterlyCurrentLiabilities ?? new Map();
+  const stockholdersEquitySeries = fundamentals.quarterlyStockholdersEquity ?? new Map();
+
+  function mostRecent(series: FundamentalsSeries): number | null {
+    const date = Array.from(series.keys()).sort().at(-1);
+    return date ? (series.get(date) ?? null) : null;
+  }
+
+  const recentTotalAssets = mostRecent(totalAssetsSeries);
+  const recentStockholdersEquity = mostRecent(stockholdersEquitySeries);
+  const recentCurrentAssets = mostRecent(currentAssetsSeries);
+  const recentCurrentLiabilities = mostRecent(currentLiabilitiesSeries);
+  const recentOperatingIncomeValue = mostRecent(operatingIncome);
+  const recentTotalLiabilities =
+    recentTotalAssets !== null && recentStockholdersEquity !== null
+      ? recentTotalAssets - recentStockholdersEquity
+      : null;
+  const recentCostOfRevenue = mostRecent(fundamentals.quarterlyCostOfRevenue ?? new Map());
+  const recentSga = mostRecent(fundamentals.quarterlySellingGeneralAndAdministration ?? new Map());
+  const recentRnd = mostRecent(fundamentals.quarterlyResearchAndDevelopment ?? new Map());
+  const recentPretaxIncome = mostRecent(fundamentals.quarterlyPretaxIncome ?? new Map());
+  const recentTaxProvision = mostRecent(fundamentals.quarterlyTaxProvision ?? new Map());
+  const recentInventory = mostRecent(fundamentals.quarterlyInventory ?? new Map());
+  const recentAccountsReceivable = mostRecent(fundamentals.quarterlyAccountsReceivable ?? new Map());
+  const recentAccountsPayable = mostRecent(fundamentals.quarterlyAccountsPayable ?? new Map());
+  const recentLongTermDebt = mostRecent(fundamentals.quarterlyLongTermDebt ?? new Map());
+  const recentCurrentDebt = mostRecent(fundamentals.quarterlyCurrentDebt ?? new Map());
+  const recentRetainedEarnings = mostRecent(fundamentals.quarterlyRetainedEarnings ?? new Map());
 
   const quarterDates = Array.from(dilutedEps.keys()).sort();
   const earningsQuarters: EarningsQuarter[] = quarterDates.slice(-4).map((date) => {
@@ -541,6 +607,25 @@ export async function getQuoteSummaryDetails(symbol: string): Promise<QuoteSumma
     netMarginRecentQuarter,
     operatingNWC,
 
+    totalAssets: recentTotalAssets,
+    totalLiabilities: recentTotalLiabilities,
+    stockholdersEquity: recentStockholdersEquity,
+    currentAssets: recentCurrentAssets,
+    currentLiabilities: recentCurrentLiabilities,
+    inventory: recentInventory,
+    accountsReceivable: recentAccountsReceivable,
+    accountsPayable: recentAccountsPayable,
+    longTermDebt: recentLongTermDebt,
+    currentDebt: recentCurrentDebt,
+    retainedEarnings: recentRetainedEarnings,
+
+    operatingIncome: recentOperatingIncomeValue,
+    costOfRevenue: recentCostOfRevenue,
+    sellingGeneralAndAdmin: recentSga,
+    researchAndDevelopment: recentRnd,
+    pretaxIncome: recentPretaxIncome,
+    taxProvision: recentTaxProvision,
+
     earningsQuarters,
   };
 }
@@ -580,6 +665,27 @@ export type CompPeriodFinancials = {
   enterpriseToEbitda: number | null;
   returnOnAssets: number | null;
   returnOnEquity: number | null;
+
+  // Balance sheet / income statement line items as reported for this period.
+  totalAssets: number | null;
+  totalLiabilities: number | null;
+  stockholdersEquity: number | null;
+  currentAssets: number | null;
+  currentLiabilities: number | null;
+  operatingIncome: number | null;
+
+  costOfRevenue: number | null;
+  grossProfits: number | null;
+  sellingGeneralAndAdmin: number | null;
+  researchAndDevelopment: number | null;
+  pretaxIncome: number | null;
+  taxProvision: number | null;
+  inventory: number | null;
+  accountsReceivable: number | null;
+  accountsPayable: number | null;
+  longTermDebt: number | null;
+  currentDebt: number | null;
+  retainedEarnings: number | null;
 };
 
 /** Calendar-quarter or calendar-year bucket for a reported-period end date, e.g. "2026-Q3" or "2026". */
@@ -605,6 +711,18 @@ type RawPeriodPoint = {
   currentLiabilities: number | null;
   cash: number | null;
   totalDebt: number | null;
+  costOfRevenue: number | null;
+  grossProfits: number | null;
+  sga: number | null;
+  rnd: number | null;
+  pretaxIncome: number | null;
+  taxProvision: number | null;
+  inventory: number | null;
+  accountsReceivable: number | null;
+  accountsPayable: number | null;
+  longTermDebt: number | null;
+  currentDebt: number | null;
+  retainedEarnings: number | null;
 };
 
 const PERIOD_FIELD_TYPES = {
@@ -620,6 +738,18 @@ const PERIOD_FIELD_TYPES = {
   currentLiabilities: "CurrentLiabilities",
   cash: "CashAndCashEquivalents",
   totalDebt: "TotalDebt",
+  costOfRevenue: "CostOfRevenue",
+  grossProfits: "GrossProfit",
+  sga: "SellingGeneralAndAdministration",
+  rnd: "ResearchAndDevelopment",
+  pretaxIncome: "PretaxIncome",
+  taxProvision: "TaxProvision",
+  inventory: "Inventory",
+  accountsReceivable: "AccountsReceivable",
+  accountsPayable: "AccountsPayable",
+  longTermDebt: "LongTermDebt",
+  currentDebt: "CurrentDebt",
+  retainedEarnings: "RetainedEarnings",
 } as const;
 
 async function fetchPeriodPoints(
@@ -628,32 +758,25 @@ async function fetchPeriodPoints(
   lookbackDays: number
 ): Promise<RawPeriodPoint[]> {
   const typeFor = (field: keyof typeof PERIOD_FIELD_TYPES) => `${prefix}${PERIOD_FIELD_TYPES[field]}`;
+  const fieldNames = Object.keys(PERIOD_FIELD_TYPES) as (keyof typeof PERIOD_FIELD_TYPES)[];
   const series = await fetchFundamentalsSeries(
     symbol,
-    Object.keys(PERIOD_FIELD_TYPES).map((f) => typeFor(f as keyof typeof PERIOD_FIELD_TYPES)),
+    fieldNames.map((f) => typeFor(f)),
     lookbackDays
   ).catch(() => ({}) as Record<string, FundamentalsSeries>);
 
   const dates = new Set<string>();
-  for (const field of Object.keys(PERIOD_FIELD_TYPES) as (keyof typeof PERIOD_FIELD_TYPES)[]) {
+  for (const field of fieldNames) {
     for (const date of (series[typeFor(field)] ?? new Map()).keys()) dates.add(date);
   }
 
-  return Array.from(dates).map((date) => ({
-    date,
-    revenue: series[typeFor("revenue")]?.get(date) ?? null,
-    netIncome: series[typeFor("netIncome")]?.get(date) ?? null,
-    ebitda: series[typeFor("ebitda")]?.get(date) ?? null,
-    operatingIncome: series[typeFor("operatingIncome")]?.get(date) ?? null,
-    eps: series[typeFor("eps")]?.get(date) ?? null,
-    shares: series[typeFor("shares")]?.get(date) ?? null,
-    equity: series[typeFor("equity")]?.get(date) ?? null,
-    totalAssets: series[typeFor("totalAssets")]?.get(date) ?? null,
-    currentAssets: series[typeFor("currentAssets")]?.get(date) ?? null,
-    currentLiabilities: series[typeFor("currentLiabilities")]?.get(date) ?? null,
-    cash: series[typeFor("cash")]?.get(date) ?? null,
-    totalDebt: series[typeFor("totalDebt")]?.get(date) ?? null,
-  }));
+  return Array.from(dates).map((date) => {
+    const point: Partial<RawPeriodPoint> & { date: string } = { date };
+    for (const field of fieldNames) {
+      point[field] = series[typeFor(field)]?.get(date) ?? null;
+    }
+    return point as RawPeriodPoint;
+  });
 }
 
 /** Last close on or before the target date; falls back to the nearest available close. */
@@ -799,6 +922,27 @@ export async function getPeriodicFinancials(symbol: string): Promise<CompPeriodF
           : null,
       returnOnEquity:
         trailingBasis.netIncome !== null && point.equity ? trailingBasis.netIncome / point.equity : null,
+
+      totalAssets: point.totalAssets,
+      totalLiabilities:
+        point.totalAssets !== null && point.equity !== null ? point.totalAssets - point.equity : null,
+      stockholdersEquity: point.equity,
+      currentAssets: point.currentAssets,
+      currentLiabilities: point.currentLiabilities,
+      operatingIncome: point.operatingIncome,
+
+      costOfRevenue: point.costOfRevenue,
+      grossProfits: point.grossProfits,
+      sellingGeneralAndAdmin: point.sga,
+      researchAndDevelopment: point.rnd,
+      pretaxIncome: point.pretaxIncome,
+      taxProvision: point.taxProvision,
+      inventory: point.inventory,
+      accountsReceivable: point.accountsReceivable,
+      accountsPayable: point.accountsPayable,
+      longTermDebt: point.longTermDebt,
+      currentDebt: point.currentDebt,
+      retainedEarnings: point.retainedEarnings,
     });
   }
 
