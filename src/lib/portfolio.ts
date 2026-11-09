@@ -327,6 +327,9 @@ function parseYtdSheet(rows: Row[]): {
   let holdingsRowIndex = -1;
   let sectorRun: HeaderCell[] | undefined;
   let sectorRowIndex = -1;
+  // The "Total" row below the holdings carries the sheet's official YTD
+  // totals — its cost basis folds in positions sold during the year.
+  let totalRowIndex = -1;
 
   rows.forEach((row, rowIndex) => {
     const runs = getRuns(row);
@@ -335,6 +338,9 @@ function parseYtdSheet(rows: Row[]): {
       if (!holdingsRun && texts.some((t) => /^tickers?$/.test(t))) {
         holdingsRun = run;
         holdingsRowIndex = rowIndex;
+      }
+      if (holdingsRun && totalRowIndex === -1 && rowIndex > holdingsRowIndex && texts.includes("total")) {
+        totalRowIndex = rowIndex;
       }
       if (
         !sectorRun &&
@@ -408,7 +414,20 @@ function parseYtdSheet(rows: Row[]): {
     }
   }
 
-  return { ytdHoldings, ytdSectorPerformance, ytdPortfolioReturn: computeYtdPortfolioReturn(ytdHoldings) };
+  // Prefer the sheet's own "Total" row: it adds back the Jan 1 basis of
+  // positions sold during the year, which a plain sum of the still-held rows
+  // would miss. Fall back to that plain sum if the row isn't there.
+  let ytdPortfolioReturn = computeYtdPortfolioReturn(ytdHoldings);
+  if (holdingsRun && totalRowIndex !== -1) {
+    const totalRow = rows[totalRowIndex];
+    const paidCol = findCol(holdingsRun, /total price paid/i);
+    const currentCol = findCol(holdingsRun, /total current price/i);
+    const paid = paidCol !== undefined ? cellNumber(totalRow[paidCol]) : null;
+    const current = currentCol !== undefined ? cellNumber(totalRow[currentCol]) : null;
+    if (paid && current !== null) ytdPortfolioReturn = current / paid - 1;
+  }
+
+  return { ytdHoldings, ytdSectorPerformance, ytdPortfolioReturn };
 }
 
 function toDirectDropboxUrl(url: string): string {
@@ -448,13 +467,6 @@ function sheetToRows(workbook: XLSX.WorkBook, name: string): Row[] {
   });
 }
 
-/** Reads a specific cell (e.g. "M36") straight off a sheet by its own formula result. */
-function readCell(workbook: XLSX.WorkBook, sheetName: string, address: string): number | null {
-  const sheet = workbook.Sheets[sheetName];
-  const cell = sheet?.[address];
-  return typeof cell?.v === "number" && Number.isFinite(cell.v) ? cell.v : null;
-}
-
 const CACHE_TTL_MS = Number(process.env.PORTFOLIO_CACHE_TTL_MS ?? 5 * 60 * 1000);
 
 let cache: { data: PortfolioData; fetchedAt: number } | null = null;
@@ -478,10 +490,7 @@ async function loadPortfolioData(): Promise<PortfolioData> {
     const parsed = parseYtdSheet(ytdRows);
     ytdHoldings = parsed.ytdHoldings;
     ytdSectorPerformance = parsed.ytdSectorPerformance;
-    // M36 is the sheet's own official YTD return — it folds in realized
-    // gains from positions sold during the year via the adjustment rows
-    // above it, which a plain sum of the still-held rows below would miss.
-    ytdPortfolioReturn = readCell(workbook, ytdSheetName, "M36") ?? parsed.ytdPortfolioReturn;
+    ytdPortfolioReturn = parsed.ytdPortfolioReturn;
   }
 
   return {
