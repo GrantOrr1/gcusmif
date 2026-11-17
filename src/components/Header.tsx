@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -161,12 +162,16 @@ export default function Header() {
     <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold text-foreground">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-brand text-sm font-bold text-white">
-            S
-          </span>
-          <span className="hidden sm:inline">SMIF</span>
+          <Image
+            src="/images/smif-logo-square.png"
+            alt="SMIF — Student Managed Investment Fund, Grand Canyon University"
+            width={1080}
+            height={1080}
+            loading="eager"
+            className="h-[52.8px] w-[52.8px] rounded-xl border border-border"
+          />
           <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted">
-            Beta 2.8
+            Beta 2.81
           </span>
         </Link>
 
@@ -180,7 +185,7 @@ export default function Header() {
                 <div key={tab.href} className="group relative">
                   <Link
                     href={tab.href}
-                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`rounded-md px-[13.2px] py-[8.8px] text-[15.4px] font-medium transition-colors ${
                       aboutActive ? "text-brand" : "text-muted hover:text-foreground"
                     }`}
                   >
@@ -211,7 +216,7 @@ export default function Header() {
                 <div key={tab.href} className="group relative">
                   <Link
                     href={tab.href}
-                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`rounded-md px-[13.2px] py-[8.8px] text-[15.4px] font-medium transition-colors ${
                       active ? "text-brand" : "text-muted hover:text-foreground"
                     }`}
                   >
@@ -247,7 +252,7 @@ export default function Header() {
                 <div key={tab.href} className="group relative">
                   <Link
                     href={tab.href}
-                    className={`relative rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`relative rounded-md px-[13.2px] py-[8.8px] text-[15.4px] font-medium transition-colors ${
                       coverageActive ? "text-brand" : "text-muted hover:text-foreground"
                     }`}
                   >
@@ -287,7 +292,7 @@ export default function Header() {
               return (
                 <div key={tab.href} className="group relative">
                   <span
-                    className={`cursor-default rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`cursor-default rounded-md px-[13.2px] py-[8.8px] text-[15.4px] font-medium transition-colors ${
                       otherActive ? "text-brand" : "text-muted hover:text-foreground"
                     }`}
                   >
@@ -314,7 +319,7 @@ export default function Header() {
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`relative rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                className={`relative rounded-md px-[13.2px] py-[8.8px] text-[15.4px] font-medium transition-colors ${
                   active ? "text-brand" : "text-muted hover:text-foreground"
                 }`}
               >
