@@ -28,7 +28,6 @@ export const TEAM: TeamMember[] = [
   { name: "Leon Ray", role: "Analyst", sector: "Healthcare", email: "LRay22@my.gcu.edu" },
   { name: "Maya Jacobs", role: "Analyst", sector: "Healthcare" },
   { name: "Ben Hughs", role: "Analyst", sector: "TMT" },
-  { name: "Seth Herstedt", role: "Analyst", sector: "TMT" },
   { name: "Sam Kingsbury", role: "Analyst", sector: "Energy" },
   { name: "Victor Estrada Leon", role: "Analyst", sector: "Energy" },
   { name: "Daniel Frohling", role: "Analyst", sector: "Energy" },
