@@ -86,10 +86,10 @@ export default async function Home() {
               View Portfolio
             </Link>
             <Link
-              href="/investor-thesis"
+              href="/about"
               className="rounded-md border border-white/40 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
             >
-              Read Our Thesis
+              Read About Us
             </Link>
           </div>
         </div>
@@ -97,7 +97,7 @@ export default async function Home() {
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatBox label="Total Value" value={summary.totalValue} kind="currency" />
+          <StatBox label="Total Value of Equities" value={summary.totalValue} kind="currency" />
           <StatBox
             label="YTD Return"
             value={ytdReturn}

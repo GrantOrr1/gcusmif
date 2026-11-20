@@ -30,7 +30,6 @@ export default function Header() {
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [portfolioMenuOpen, setPortfolioMenuOpen] = useState(false);
-  const [aboutMenuOpen, setAboutMenuOpen] = useState(false);
   const [coverageMenuOpen, setCoverageMenuOpen] = useState(false);
   const [otherMenuOpen, setOtherMenuOpen] = useState(false);
   const [pendingReports, setPendingReports] = useState(0);
@@ -171,45 +170,13 @@ export default function Header() {
             className="h-[52.8px] w-[52.8px] rounded-xl border border-border"
           />
           <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted">
-            Beta 2.81
+            Beta 2.9
           </span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
           {TABS.map((tab) => {
             const active = isActive(pathname, tab.href);
-
-            if (tab.href === "/about") {
-              const aboutActive = active || isActive(pathname, "/investor-thesis");
-              return (
-                <div key={tab.href} className="group relative">
-                  <Link
-                    href={tab.href}
-                    className={`rounded-md px-[13.2px] py-[8.8px] text-[15.4px] font-medium transition-colors ${
-                      aboutActive ? "text-brand" : "text-muted hover:text-foreground"
-                    }`}
-                  >
-                    {tab.label}
-                  </Link>
-                  <div className="invisible absolute left-0 top-full w-56 pt-1 opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100">
-                    <div className="rounded-md border border-border bg-surface p-1.5 shadow-lg">
-                      <Link
-                        href="/about"
-                        className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-background"
-                      >
-                        About
-                      </Link>
-                      <Link
-                        href="/investor-thesis"
-                        className="block rounded-md px-3 py-2 text-sm text-muted hover:bg-background hover:text-foreground"
-                      >
-                        Investor Thesis
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
 
             if (tab.href === "/portfolio") {
               return (
@@ -378,41 +345,6 @@ export default function Header() {
       {menuOpen && (
         <nav className="flex flex-col gap-1 border-t border-border px-4 py-3 md:hidden">
           {TABS.map((tab) => {
-            if (tab.href === "/about") {
-              const aboutActive = isActive(pathname, "/about") || isActive(pathname, "/investor-thesis");
-              return (
-                <div key={tab.href}>
-                  <button
-                    onClick={() => setAboutMenuOpen((v) => !v)}
-                    className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium ${
-                      aboutActive ? "text-brand" : "text-muted"
-                    }`}
-                  >
-                    {tab.label}
-                    <span>{aboutMenuOpen ? "−" : "+"}</span>
-                  </button>
-                  {aboutMenuOpen && (
-                    <div className="ml-3 flex flex-col gap-1 border-l border-border pl-3">
-                      <Link
-                        href="/about"
-                        onClick={() => setMenuOpen(false)}
-                        className="rounded-md px-3 py-2 text-sm text-muted"
-                      >
-                        About
-                      </Link>
-                      <Link
-                        href="/investor-thesis"
-                        onClick={() => setMenuOpen(false)}
-                        className="rounded-md px-3 py-2 text-sm text-muted"
-                      >
-                        Investor Thesis
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
             if (tab.href === "/portfolio") {
               return (
                 <div key={tab.href}>
